@@ -7,7 +7,6 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 
 async function requireSuperAdmin() {
-  // ⬇️ await cookies() here too
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
   if (!token) return null;
@@ -46,7 +45,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Missing fields" }, { status: 400 });
     }
 
-    if (!["super-admin", "accounts-admin", "managers-admin"].includes(role)) {
+    // ✅ include "renter" as a valid role
+    const ALLOWED_ROLES = [
+      "super-admin",
+      "accounts-admin",
+      "managers-admin",
+      "renter",
+    ];
+
+    if (!ALLOWED_ROLES.includes(role)) {
       return NextResponse.json({ message: "Invalid role" }, { status: 400 });
     }
 

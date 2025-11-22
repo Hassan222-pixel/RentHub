@@ -19,6 +19,7 @@ export default function AdminUsersPage() {
     name: "",
     email: "",
     password: "",
+    // default role when opening form
     role: "accounts-admin",
   });
 
@@ -63,7 +64,12 @@ export default function AdminUsersPage() {
       return;
     }
 
-    setFormData({ name: "", email: "", password: "", role: "accounts-admin" });
+    setFormData({
+      name: "",
+      email: "",
+      password: "",
+      role: "accounts-admin",
+    });
     fetchAdmins();
   };
 
@@ -75,10 +81,14 @@ export default function AdminUsersPage() {
       {error && <div className="alert alert-danger mt-3">{error}</div>}
 
       <div className="row mt-4">
+        {/* Create Admin / Renter */}
         <div className="col-md-6 mb-4">
           <div className="card">
             <div className="card-body">
-              <h5>Create New Admin</h5>
+              <h5>Create New User</h5>
+              <p className="text-muted small mb-3">
+                You can create admin users or renter accounts here.
+              </p>
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
                   <label className="form-label">Name</label>
@@ -91,6 +101,7 @@ export default function AdminUsersPage() {
                     required
                   />
                 </div>
+
                 <div className="mb-3">
                   <label className="form-label">Email</label>
                   <input
@@ -103,6 +114,7 @@ export default function AdminUsersPage() {
                     required
                   />
                 </div>
+
                 <div className="mb-3">
                   <label className="form-label">Password</label>
                   <input
@@ -115,6 +127,7 @@ export default function AdminUsersPage() {
                     required
                   />
                 </div>
+
                 <div className="mb-3">
                   <label className="form-label">Role</label>
                   <select
@@ -127,20 +140,28 @@ export default function AdminUsersPage() {
                     <option value="super-admin">Super Admin</option>
                     <option value="accounts-admin">Accounts Admin</option>
                     <option value="managers-admin">Managers Admin</option>
+                    {/* 👇 NEW: renter role */}
+                    <option value="renter">Renter</option>
                   </select>
+                  <small className="text-muted">
+                    Select <strong>Renter</strong> to create a dorm owner
+                    account that uses the Renter Dashboard.
+                  </small>
                 </div>
+
                 <button className="btn btn-success" type="submit">
-                  Create Admin
+                  Create User
                 </button>
               </form>
             </div>
           </div>
         </div>
 
+        {/* Existing Users */}
         <div className="col-md-6 mb-4">
           <div className="card">
             <div className="card-body">
-              <h5>Existing Admins</h5>
+              <h5>Existing Users</h5>
               {loading ? (
                 <p>Loading...</p>
               ) : (

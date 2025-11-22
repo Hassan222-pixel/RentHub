@@ -1,32 +1,48 @@
 // models/User.ts
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, Document, models } from "mongoose";
 
-export type UserRole = "super-admin" | "accounts-admin" | "managers-admin";
+export type UserRole =
+  | "super-admin"
+  | "accounts-admin"
+  | "managers-admin"
+  | "renter";
 
 export interface IUser extends Document {
   name: string;
   email: string;
-  password: string; // hashed
+  password: string;
   role: UserRole;
   permissions: string[];
   createdAt: Date;
+  updatedAt: Date;
 }
 
 const UserSchema = new Schema<IUser>(
   {
     name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+
     password: { type: String, required: true },
+
     role: {
       type: String,
-      enum: ["super-admin", "accounts-admin", "managers-admin"],
-      default: "accounts-admin",
+      enum: ["super-admin", "accounts-admin", "managers-admin", "renter"], // 👈 MUST include renter
+      default: "super-admin",
     },
-    permissions: [{ type: String }],
+
+    permissions: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true }
 );
 
-// Avoid recompiling model during dev hot reload
-export const User: Model<IUser> =
-  mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+export const User = models.User || mongoose.model<IUser>("User", UserSchema);

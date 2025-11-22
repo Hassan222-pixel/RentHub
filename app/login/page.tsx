@@ -6,61 +6,91 @@ import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("super@admin.com");
-  const [password, setPassword] = useState("123456");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-      headers: { "Content-Type": "application/json" },
-    });
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (!res.ok) {
       const data = await res.json();
-      setError(data.message || "Login failed");
-      return;
-    }
 
-    router.push("/dashboard");
+      if (!res.ok) {
+        setError(data.message || "Invalid credentials");
+        setLoading(false);
+        return;
+      }
+
+      const role = data.user?.role;
+
+      // 🔀 Redirect based on role
+      if (role === "renter") {
+        router.push("/renter");
+      } else {
+        // super-admin, accounts-admin, managers-admin → admin dashboard
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="container mt-5">
-      <div className="row justify-content-center">
-        <div className="col-md-4">
-          <h3 className="mb-4 text-center">Admin Login</h3>
-          <form onSubmit={handleSubmit}>
-            {error && <div className="alert alert-danger">{error}</div>}
-            <div className="mb-3">
-              <label className="form-label">Email</label>
-              <input
-                className="form-control"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="mb-3">
-              <label className="form-label">Password</label>
-              <input
-                className="form-control"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <button className="btn btn-primary w-100" type="submit">
-              Login
-            </button>
-          </form>
-        </div>
+    <div className="min-vh-100 d-flex align-items-center justify-content-center bg-dark">
+      <div className="card p-4" style={{ minWidth: 360 }}>
+        <h3 className="mb-3 text-center">RentHub Admin Login</h3>
+        <p className="text-muted small text-center mb-4">
+          Sign in with your RentHub account.
+        </p>
+
+        {error && <div className="alert alert-danger py-2">{error}</div>}
+
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <label className="form-label">Email</label>
+            <input
+              type="email"
+              className="form-control"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="form-label">Password</label>
+            <input
+              type="password"
+              className="form-control"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="btn btn-primary w-100"
+            disabled={loading}
+          >
+            {loading ? "Signing in..." : "Login"}
+          </button>
+        </form>
       </div>
     </div>
   );
