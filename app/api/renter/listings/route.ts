@@ -1,13 +1,20 @@
 // app/api/renter/listings/route.ts
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/mongodb"; // ✅ FIXED
+import { connectToDatabase } from "@/lib/mongodb";
 import { Dorm } from "@/models/Dorm";
 import { getCurrentUserFromApi } from "@/lib/currentUser";
+
+// Minimal user shape we care about in this route
+type CurrentUser = {
+  _id: string;
+  role: string; // or more specific if you want: "renter" | "admin" | "super-admin" | "manager" | "client"
+};
 
 export async function GET() {
   try {
     await connectToDatabase();
-    const user = await getCurrentUserFromApi();
+
+    const user = (await getCurrentUserFromApi()) as CurrentUser | null;
 
     if (!user || user.role !== "renter") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -30,7 +37,8 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     await connectToDatabase();
-    const user = await getCurrentUserFromApi();
+
+    const user = (await getCurrentUserFromApi()) as CurrentUser | null;
 
     if (!user || user.role !== "renter") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

@@ -82,10 +82,11 @@ export default function RenterListingsPage() {
                 <div className="mt-3 d-flex justify-content-between align-items-center">
                   <Link
                     href={`/renter/listings/${listing._id}/edit`}
-                    className="btn btn-sm btn-outline-light"
+                    className="btn btn-sm btn-outline-primary"
                   >
                     Edit
                   </Link>
+
                   <small className="text-muted">
                     {new Date(listing.createdAt).toLocaleDateString()}
                   </small>

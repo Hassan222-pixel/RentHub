@@ -1,22 +1,33 @@
 // app/api/renter/listings/[id]/route.ts
 import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/mongodb"; // ✅ FIXED
+import { connectToDatabase } from "@/lib/mongodb";
 import { Dorm } from "@/models/Dorm";
 import { getCurrentUserFromApi } from "@/lib/currentUser";
 
-interface Params {
-  params: { id: string };
-}
+// In this Next.js version, params is a Promise and must be awaited
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
 
-export async function GET(_req: Request, { params }: Params) {
+// Minimal shape of the user object we care about here
+type CurrentUser = {
+  _id: string;
+  role: string; // or: "renter" | "admin" | "super-admin" | "manager" | "client"
+};
+
+export async function GET(_req: Request, context: RouteContext) {
   try {
     await connectToDatabase();
-    const user = await getCurrentUserFromApi();
+
+    const user = (await getCurrentUserFromApi()) as CurrentUser | null;
+
     if (!user || user.role !== "renter") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const dorm = await Dorm.findOne({ _id: params.id, owner: user._id }).lean();
+    const { id } = await context.params; // ✅ await params
+    const dorm = await Dorm.findOne({ _id: id, owner: user._id }).lean();
+
     if (!dorm) {
       return NextResponse.json({ message: "Not found" }, { status: 404 });
     }
@@ -31,18 +42,21 @@ export async function GET(_req: Request, { params }: Params) {
   }
 }
 
-export async function PUT(req: Request, { params }: Params) {
+export async function PUT(req: Request, context: RouteContext) {
   try {
     await connectToDatabase();
-    const user = await getCurrentUserFromApi();
+
+    const user = (await getCurrentUserFromApi()) as CurrentUser | null;
+
     if (!user || user.role !== "renter") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await context.params; // ✅ await params
     const body = await req.json();
 
     const dorm = await Dorm.findOneAndUpdate(
-      { _id: params.id, owner: user._id },
+      { _id: id, owner: user._id },
       body,
       { new: true }
     );
@@ -62,16 +76,20 @@ export async function PUT(req: Request, { params }: Params) {
 }
 
 // soft delete / deactivate
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(_req: Request, context: RouteContext) {
   try {
     await connectToDatabase();
-    const user = await getCurrentUserFromApi();
+
+    const user = (await getCurrentUserFromApi()) as CurrentUser | null;
+
     if (!user || user.role !== "renter") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await context.params; // ✅ await params
+
     const dorm = await Dorm.findOneAndUpdate(
-      { _id: params.id, owner: user._id },
+      { _id: id, owner: user._id },
       { isActive: false },
       { new: true }
     );
