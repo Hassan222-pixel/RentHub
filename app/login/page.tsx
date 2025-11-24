@@ -1,7 +1,6 @@
-// app/login/page.tsx
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -30,37 +29,93 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="container mt-5">
-      <div className="row justify-content-center">
-        <div className="col-md-4">
-          <h3 className="mb-4 text-center">Admin Login</h3>
-          <form onSubmit={handleSubmit}>
-            {error && <div className="alert alert-danger">{error}</div>}
-            <div className="mb-3">
-              <label className="form-label">Email</label>
-              <input
-                className="form-control"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="mb-3">
-              <label className="form-label">Password</label>
-              <input
-                className="form-control"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <button className="btn btn-primary w-100" type="submit">
-              Login
-            </button>
-          </form>
-        </div>
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundImage: 'url("/template/images/banner1.jpg")',
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: "20px",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "420px",
+          background: "rgba(255, 255, 255, 0.95)",
+          padding: "35px",
+          borderRadius: "12px",
+          boxShadow: "0 0 25px rgba(0,0,0,0.2)",
+        }}
+      >
+        <h2
+          style={{
+            textAlign: "center",
+            marginBottom: "25px",
+            fontWeight: 700,
+            color: "#333",
+          }}
+        >
+          Admin Login
+        </h2>
+
+        {error && (
+          <div className="alert alert-danger text-center">{error}</div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <label className="form-label">Email Address</label>
+            <input
+              className="form-control"
+              type="email"
+              value={email}
+              style={{ height: "45px" }}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              required
+            />
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">Password</label>
+            <input
+              className="form-control"
+              type="password"
+              value={password}
+              style={{ height: "45px" }}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="btn btn-primary w-100"
+            style={{
+              marginTop: "10px",
+              height: "45px",
+              fontWeight: 600,
+              borderRadius: "8px",
+            }}
+          >
+            Login
+          </button>
+        </form>
+
+        <p
+          style={{
+            textAlign: "center",
+            marginTop: "20px",
+            fontSize: "14px",
+          }}
+        >
+          © {new Date().getFullYear()} RentHub Admin
+        </p>
       </div>
     </div>
   );
