@@ -5,7 +5,6 @@ import { ReactNode, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 
-// Icons
 import {
   FiHome,
   FiDollarSign,
@@ -41,9 +40,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Auth check
+  // Load user
   useEffect(() => {
-    const fetchUser = async () => {
+    const loadUser = async () => {
       try {
         const res = await fetch("/api/auth/me");
         if (!res.ok) {
@@ -52,42 +51,31 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         }
         const data = await res.json();
         setUser(data.user);
-      } catch (err) {
-        console.error("Error fetching current user:", err);
+      } catch {
         router.replace("/login");
       } finally {
         setLoading(false);
       }
     };
-
-    fetchUser();
+    loadUser();
   }, [router]);
 
-  // Theme: load from localStorage / system
+  // Theme load
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored =
-      (localStorage.getItem("renthub-theme") as ThemeOption) || "system";
+    const stored = (localStorage.getItem("renthub-theme") as ThemeOption) || "system";
     setTheme(stored);
     applyTheme(stored);
   }, []);
 
   const applyTheme = (value: ThemeOption) => {
-    if (typeof document === "undefined") return;
-    if (value === "light") {
-      document.documentElement.setAttribute("data-theme", "light");
-    } else if (value === "dark") {
-      document.documentElement.setAttribute("data-theme", "dark");
-    } else {
-      document.documentElement.removeAttribute("data-theme"); // system
-    }
+    if (value === "light") document.documentElement.setAttribute("data-theme", "light");
+    else if (value === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    else document.documentElement.removeAttribute("data-theme");
   };
 
   const changeTheme = (value: ThemeOption) => {
     setTheme(value);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("renthub-theme", value);
-    }
+    localStorage.setItem("renthub-theme", value);
     applyTheme(value);
     setThemeMenuOpen(false);
   };
@@ -97,38 +85,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     router.replace("/login");
   };
 
-  if (loading) {
-    return <div className="p-4 text-light">Loading...</div>;
-  }
-
-  if (!user) {
-    return null;
-  }
+  if (loading) return <div className="p-4">Loading...</div>;
+  if (!user) return null;
 
   const isSuperAdmin = user.role === "super-admin";
   const isAccountsAdmin = user.role === "accounts-admin";
   const isManagersAdmin = user.role === "managers-admin";
 
-  const avatarInitial = (user.name && user.name[0]?.toUpperCase()) || "R";
+  const isActive = (t: string) => pathname?.startsWith(t);
 
-  // theme icon for button
-  const themeIcon =
-    theme === "light" ? (
-      <FiSun size={18} />
-    ) : theme === "dark" ? (
-      <FiMoon size={18} />
-    ) : (
-      <FiMonitor size={18} />
-    );
-
-  // Active link helper
-  const isActive = (target: string) => {
-    if (!pathname) return false;
-    if (target === "/dashboard") {
-      return pathname === "/dashboard";
-    }
-    return pathname.startsWith(target);
-  };
+  const avatarInitial = user.name?.[0]?.toUpperCase() || "S";
 
   // Close mobile sidebar whenever a nav link is clicked
   const handleNavClick = () => {
@@ -160,62 +126,29 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
 
         <div className="d-flex align-items-center gap-3">
-          {/* Theme switcher */}
-          <div className="renthub-theme-switcher">
-            <button
-              type="button"
-              className="renthub-theme-btn"
-              onClick={() => setThemeMenuOpen((o) => !o)}
-            >
-              {themeIcon}
-            </button>
-            {themeMenuOpen && (
-              <div className="renthub-theme-dropdown">
-                <button
-                  type="button"
-                  className={
-                    "renthub-theme-item" +
-                    (theme === "system" ? " renthub-theme-item-active" : "")
-                  }
-                  onClick={() => changeTheme("system")}
-                >
-                  <FiMonitor />
-                  <span>System theme</span>
-                </button>
-                <button
-                  type="button"
-                  className={
-                    "renthub-theme-item" +
-                    (theme === "light" ? " renthub-theme-item-active" : "")
-                  }
-                  onClick={() => changeTheme("light")}
-                >
-                  <FiSun />
-                  <span>Light theme</span>
-                </button>
-                <button
-                  type="button"
-                  className={
-                    "renthub-theme-item" +
-                    (theme === "dark" ? " renthub-theme-item-active" : "")
-                  }
-                  onClick={() => changeTheme("dark")}
-                >
-                  <FiMoon />
-                  <span>Dark theme</span>
-                </button>
-              </div>
-            )}
-          </div>
 
-          <span className="renthub-topbar-email d-none d-md-inline">
-            {user.email}
-          </span>
+          <button
+            className="renthub-theme-btn"
+            onClick={() => setThemeMenuOpen((o) => !o)}
+          >
+            {theme === "light" ? <FiSun /> : theme === "dark" ? <FiMoon /> : <FiMonitor />}
+          </button>
+
+          {themeMenuOpen && (
+            <div className="renthub-theme-dropdown">
+              <button onClick={() => changeTheme("system")}>System</button>
+              <button onClick={() => changeTheme("light")}>Light</button>
+              <button onClick={() => changeTheme("dark")}>Dark</button>
+            </div>
+          )}
+
+          <span className="d-none d-md-inline">{user.email}</span>
+
           <div className="renthub-avatar-circle">{avatarInitial}</div>
         </div>
       </header>
 
-      {/* Main area */}
+      {/* MAIN CONTENT WRAPPER */}
       <div className="renthub-main-shell d-flex flex-grow-1">
         {/* Sidebar */}
         <aside
@@ -227,32 +160,26 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         >
           {/* Floating toggle (desktop only, hidden on mobile via CSS) */}
           <button
-            type="button"
             className="renthub-sidebar-toggle"
             onClick={() => setCollapsed((c) => !c)}
           >
-            {collapsed ? (
-              <FiChevronRight size={16} />
-            ) : (
-              <FiChevronLeft size={16} />
-            )}
+            {collapsed ? <FiChevronRight /> : <FiChevronLeft />}
           </button>
 
-          {/* Profile */}
           <div className="renthub-sidebar-header">
             <div className="renthub-sidebar-avatar">{avatarInitial}</div>
-            <div className="renthub-sidebar-user">
+            <div>
               <div className="renthub-sidebar-name">{user.name}</div>
-              <div className="renthub-sidebar-role text-uppercase">
-                {user.role}
-              </div>
+              <div className="renthub-sidebar-role text-uppercase">{user.role}</div>
             </div>
           </div>
 
-          {/* Nav */}
           <nav className="renthub-nav flex-grow-1 mt-3">
             <p className="renthub-nav-section-label">Navigation</p>
-            <ul className="list-unstyled m-0">
+
+            <ul className="list-unstyled">
+
+              {/* HOME */}
               <li>
                 <Link
                   href="/dashboard"
@@ -262,13 +189,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   }
                   onClick={handleNavClick}
                 >
-                  <span className="renthub-nav-icon">
-                    <FiHome size={18} />
-                  </span>
-                  <span className="renthub-nav-label">Home</span>
+                  <FiHome /><span>Home</span>
                 </Link>
               </li>
 
+              {/* ACCOUNTS */}
               {(isSuperAdmin || isAccountsAdmin) && (
                 <li>
                   <Link
@@ -281,14 +206,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     }
                     onClick={handleNavClick}
                   >
-                    <span className="renthub-nav-icon">
-                      <FiDollarSign size={18} />
-                    </span>
-                    <span className="renthub-nav-label">Accounts</span>
+                    <FiDollarSign /><span>Accounts</span>
                   </Link>
                 </li>
               )}
 
+              {/* MANAGERS */}
               {(isSuperAdmin || isManagersAdmin) && (
                 <li>
                   <Link
@@ -301,14 +224,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     }
                     onClick={handleNavClick}
                   >
-                    <span className="renthub-nav-icon">
-                      <FiUsers size={18} />
-                    </span>
-                    <span className="renthub-nav-label">Managers</span>
+                    <FiUsers /><span>Managers</span>
                   </Link>
                 </li>
               )}
 
+              {/* ADMIN USERS */}
               {isSuperAdmin && (
                 <li>
                   <Link
@@ -321,17 +242,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     }
                     onClick={handleNavClick}
                   >
-                    <span className="renthub-nav-icon">
-                      <FiUser size={18} />
-                    </span>
-                    <span className="renthub-nav-label">Admin Users</span>
+                    <FiUser /><span>Admin Users</span>
                   </Link>
                 </li>
               )}
+
             </ul>
           </nav>
 
-          {/* Logout */}
+          {/* LOGOUT */}
           <div className="renthub-sidebar-footer">
             <button
               type="button"
@@ -345,6 +264,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <span className="renthub-logout-label">Logout</span>
             </button>
           </div>
+
         </aside>
 
         {/* Backdrop for mobile sidebar */}
