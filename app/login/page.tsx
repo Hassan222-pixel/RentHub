@@ -5,79 +5,90 @@ import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
+  const [email, setEmail] = useState("super@admin.com");
+  const [password, setPassword] = useState("123456");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
 
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+      headers: { "Content-Type": "application/json" },
+    });
 
+    if (!res.ok) {
       const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.message || "Invalid credentials");
-        setLoading(false);
-        return;
-      }
-
-      const role = data.user?.role;
-
-      // 🔀 Redirect based on role
-      if (role === "renter") {
-        router.push("/renter");
-      } else {
-        // super-admin, accounts-admin, managers-admin → admin dashboard
-        router.push("/dashboard");
-      }
-    } catch (err) {
-      console.error("Login error:", err);
-      setError("Something went wrong. Please try again.");
-      setLoading(false);
+      setError(data.message || "Login failed");
+      return;
     }
+
+    router.push("/dashboard");
   };
 
   return (
-    <div className="min-vh-100 d-flex align-items-center justify-content-center bg-dark">
-      <div className="card p-4" style={{ minWidth: 360 }}>
-        <h3 className="mb-3 text-center">RentHub Admin Login</h3>
-        <p className="text-muted small text-center mb-4">
-          Sign in with your RentHub account.
-        </p>
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundImage: 'url("/template/images/banner1.jpg")',
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: "20px",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "420px",
+          background: "rgba(255, 255, 255, 0.95)",
+          padding: "35px",
+          borderRadius: "12px",
+          boxShadow: "0 0 25px rgba(0,0,0,0.2)",
+        }}
+      >
+        <h2
+          style={{
+            textAlign: "center",
+            marginBottom: "25px",
+            fontWeight: 700,
+            color: "#333",
+          }}
+        >
+          Admin Login
+        </h2>
 
-        {error && <div className="alert alert-danger py-2">{error}</div>}
+        {error && (
+          <div className="alert alert-danger text-center">{error}</div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label className="form-label">Email</label>
+            <label className="form-label">Email Address</label>
             <input
-              type="email"
               className="form-control"
-              autoComplete="email"
+              type="email"
               value={email}
+              style={{ height: "45px" }}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
               required
             />
           </div>
 
-          <div className="mb-4">
+          <div className="mb-3">
             <label className="form-label">Password</label>
             <input
-              type="password"
               className="form-control"
-              autoComplete="current-password"
+              type="password"
               value={password}
+              style={{ height: "45px" }}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
               required
             />
           </div>
@@ -85,11 +96,26 @@ export default function LoginPage() {
           <button
             type="submit"
             className="btn btn-primary w-100"
-            disabled={loading}
+            style={{
+              marginTop: "10px",
+              height: "45px",
+              fontWeight: 600,
+              borderRadius: "8px",
+            }}
           >
-            {loading ? "Signing in..." : "Login"}
+            Login
           </button>
         </form>
+
+        <p
+          style={{
+            textAlign: "center",
+            marginTop: "20px",
+            fontSize: "14px",
+          }}
+        >
+          © {new Date().getFullYear()} RentHub Admin
+        </p>
       </div>
     </div>
   );
