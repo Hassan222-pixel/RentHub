@@ -172,7 +172,7 @@ You do not need to touch these when adding a new role:
 
 app/
 └── api/
-    └── auth/
+    └── auth/`  
         ├── login/route.ts        → Puts user.role into JWT automatically
         └── me/route.ts           → Reads user.role from JWT and returns it
 lib/
