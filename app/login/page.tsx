@@ -19,13 +19,22 @@ export default function LoginPage() {
       headers: { "Content-Type": "application/json" },
     });
 
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.message || "Login failed");
-      return;
-    }
+ if (!res.ok) {
+  const data = await res.json();
+  setError(data.message || "Login failed");
+  return;
+}
 
-    router.push("/dashboard");
+const data = await res.json();
+
+if (data.user.role === "admin") {
+  router.push("/dashboard");
+} else if (data.user.role === "renter") {
+  router.push("/renter");
+} else {
+  setError("Unknown user role");
+}
+
   };
 
   return (
