@@ -573,7 +573,13 @@ export default function EditListingPage() {
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               autoComplete="off"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault(); // stop form submit
+                }
+              }}
             />
+
             {showSearchResults && searchResults.length > 0 && (
               <div
                 className="list-group position-absolute w-100 mt-1"
