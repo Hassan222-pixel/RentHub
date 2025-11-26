@@ -12,6 +12,7 @@
     "bcryptjs": "^3.0.3",
     "bootstrap": "^5.3.8",
     "jsonwebtoken": "^9.0.2",
+    "mapbox-gl": "^3.16.0",
     "mongoose": "^8.19.4",
     "next": "16.0.3",
     "react": "19.2.0",
@@ -22,6 +23,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/mapbox-gl": "^3.4.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

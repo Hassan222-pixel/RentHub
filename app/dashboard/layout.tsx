@@ -16,6 +16,7 @@ import {
   FiSun,
   FiMonitor,
   FiLogOut,
+  FiMenu,
 } from "react-icons/fi";
 
 interface User {
@@ -31,7 +32,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(false); // sidebar collapsed (desktop)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false); // sidebar visible (mobile)
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const [theme, setTheme] = useState<ThemeOption>("system");
 
@@ -94,17 +96,34 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const avatarInitial = user.name?.[0]?.toUpperCase() || "S";
 
+  // Close mobile sidebar whenever a nav link is clicked
+  const handleNavClick = () => {
+    setMobileSidebarOpen(false);
+  };
+
   return (
     <div className="renthub-app d-flex flex-column">
-      
-      {/* TOP BAR */}
-      <header className="renthub-topbar px-4">
-        <Link href="/dashboard" className="renthub-brand-link">
-          <div className="d-flex align-items-center gap-2">
-            <FiHome size={18} />
-            <span className="text-white fw-semibold">RentHub</span>
-          </div>
-        </Link>
+      {/* Top bar */}
+      <header className="renthub-topbar px-3 px-md-4">
+        <div className="d-flex align-items-center gap-2">
+          {/* Mobile burger button */}
+          <button
+            type="button"
+            className="renthub-burger-btn d-inline d-md-none me-1"
+            onClick={() => setMobileSidebarOpen((open) => !open)}
+          >
+            <FiMenu size={20} />
+          </button>
+
+          <Link href="/dashboard" className="renthub-brand-link">
+            <div className="d-flex align-items-center gap-2">
+              <div className="renthub-logo-mark">
+                <FiHome className="renthub-logo-icon" size={18} />
+              </div>
+              <span className="fw-semibold text-white">RentHub</span>
+            </div>
+          </Link>
+        </div>
 
         <div className="d-flex align-items-center gap-3">
 
@@ -131,10 +150,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
       {/* MAIN CONTENT WRAPPER */}
       <div className="renthub-main-shell d-flex flex-grow-1">
-
-        {/* SIDEBAR */}
-        <aside className={`renthub-sidebar ${collapsed ? "renthub-sidebar-collapsed" : ""}`}>
-
+        {/* Sidebar */}
+        <aside
+          className={
+            "renthub-sidebar d-flex flex-column" +
+            (collapsed ? " renthub-sidebar-collapsed" : "") +
+            (mobileSidebarOpen ? " renthub-sidebar-mobile-open" : "")
+          }
+        >
+          {/* Floating toggle (desktop only, hidden on mobile via CSS) */}
           <button
             className="renthub-sidebar-toggle"
             onClick={() => setCollapsed((c) => !c)}
@@ -159,9 +183,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <li>
                 <Link
                   href="/dashboard"
-                  className={`renthub-nav-link ${
-                    isActive("/dashboard") ? "renthub-nav-link-active" : ""
-                  }`}
+                  className={
+                    "renthub-nav-link" +
+                    (isActive("/dashboard") ? " renthub-nav-link-active" : "")
+                  }
+                  onClick={handleNavClick}
                 >
                   <FiHome /><span>Home</span>
                 </Link>
@@ -172,9 +198,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <li>
                   <Link
                     href="/dashboard/accounts"
-                    className={`renthub-nav-link ${
-                      isActive("/dashboard/accounts") ? "renthub-nav-link-active" : ""
-                    }`}
+                    className={
+                      "renthub-nav-link" +
+                      (isActive("/dashboard/accounts")
+                        ? " renthub-nav-link-active"
+                        : "")
+                    }
+                    onClick={handleNavClick}
                   >
                     <FiDollarSign /><span>Accounts</span>
                   </Link>
@@ -186,9 +216,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <li>
                   <Link
                     href="/dashboard/managers"
-                    className={`renthub-nav-link ${
-                      isActive("/dashboard/managers") ? "renthub-nav-link-active" : ""
-                    }`}
+                    className={
+                      "renthub-nav-link" +
+                      (isActive("/dashboard/managers")
+                        ? " renthub-nav-link-active"
+                        : "")
+                    }
+                    onClick={handleNavClick}
                   >
                     <FiUsers /><span>Managers</span>
                   </Link>
@@ -200,9 +234,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <li>
                   <Link
                     href="/dashboard/admins"
-                    className={`renthub-nav-link ${
-                      isActive("/dashboard/admins") ? "renthub-nav-link-active" : ""
-                    }`}
+                    className={
+                      "renthub-nav-link" +
+                      (isActive("/dashboard/admins")
+                        ? " renthub-nav-link-active"
+                        : "")
+                    }
+                    onClick={handleNavClick}
                   >
                     <FiUser /><span>Admin Users</span>
                   </Link>
@@ -214,13 +252,30 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
           {/* LOGOUT */}
           <div className="renthub-sidebar-footer">
-            <button className="btn btn-outline-light w-100" onClick={handleLogout}>
-              <FiLogOut /><span>Logout</span>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-light w-100 renthub-logout-btn"
+              onClick={() => {
+                handleLogout();
+                setMobileSidebarOpen(false);
+              }}
+            >
+              <FiLogOut className="renthub-logout-icon" size={16} />
+              <span className="renthub-logout-label">Logout</span>
             </button>
           </div>
 
         </aside>
 
+        {/* Backdrop for mobile sidebar */}
+        {mobileSidebarOpen && (
+          <div
+            className="renthub-sidebar-backdrop d-md-none"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        )}
+
+        {/* Content */}
         <main className="renthub-main">
           <div className="renthub-content-card">{children}</div>
         </main>
