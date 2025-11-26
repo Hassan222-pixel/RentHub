@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // app/renter/listings/[id]/edit/page.tsx
 "use client";
@@ -104,8 +105,13 @@ export default function EditListingPage() {
 
   // EXTRAS
   const [amenities, setAmenities] = useState("");
-  const [images, setImages] = useState("");
+  const [images, setImages] = useState<string[]>([]);
   const [tour3DUrl, setTour3DUrl] = useState("");
+
+  // DRAG & DROP
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   // MAP + SEARCH
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -120,20 +126,108 @@ export default function EditListingPage() {
   const [longitude, setLongitude] = useState<number | undefined>(undefined);
 
   // =========================
+  // IMAGE UPLOAD HANDLERS (NO BASE64)
+  // =========================
+  const uploadImage = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Upload failed");
+    }
+
+    setImages((prev) => [...prev, data.url as string]);
+  };
+
+  const handleFilesSelected = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    setUploadError("");
+    setUploading(true);
+
+    try {
+      const fileArray = Array.from(files);
+      for (const file of fileArray) {
+        if (!file.type.startsWith("image/")) continue;
+        await uploadImage(file);
+      }
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      setUploadError(err.message || "Image upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDrop = async (e: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer?.files as FileList | null;
+    await handleFilesSelected(files);
+  };
+
+  const handleDragOver = (e: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addImageUrl = (url: string) => {
+    if (!url.trim()) return;
+    setImages((prev) => [...prev, url.trim()]);
+  };
+
+  // =========================
   // LOAD EXISTING DORM
   // =========================
   useEffect(() => {
     const load = async () => {
+      if (!id) {
+        setError("Missing listing id");
+        setLoading(false);
+        return;
+      }
+
       try {
         const res = await fetch(`/api/renter/listings/${id}`);
         const data = await res.json();
+
+        console.log("Edit listing response:", data); // 👈 see what the API returns
+
         if (!res.ok) {
           setError(data.message || "Failed to load listing");
           setLoading(false);
           return;
         }
 
-        const dorm: Dorm = data.dorm;
+        const dorm: Dorm | undefined = data.dorm;
+
+        // 👇 Extra safety: if API returns 200 but no dorm
+        if (!dorm) {
+          setError("Listing not found");
+          setLoading(false);
+          return;
+        }
+
         setTitle(dorm.title || "");
         setDescription(dorm.description || "");
         setCity(dorm.city || "");
@@ -188,7 +282,7 @@ export default function EditListingPage() {
         setAllowsPets(dorm.allowsPets ?? false);
 
         setAmenities(dorm.amenities?.join(", ") || "");
-        setImages(dorm.images?.join(", ") || "");
+        setImages(dorm.images || []); // URLs from DB
         setTour3DUrl(dorm.tour3DUrl || "");
 
         if (typeof dorm.latitude === "number") {
@@ -370,33 +464,40 @@ export default function EditListingPage() {
           address,
           university,
 
-          roomType: roomType || undefined,
-          maxOccupants: maxOccupants ? Number(maxOccupants) : undefined,
+          roomType,
+          maxOccupants: maxOccupants !== "" ? Number(maxOccupants) : null,
 
-          pricePerNight: pricePerNight ? Number(pricePerNight) : undefined,
-          pricePerWeek: pricePerWeek ? Number(pricePerWeek) : undefined,
-          pricePerMonth: pricePerMonth ? Number(pricePerMonth) : undefined,
+          pricePerNight: pricePerNight !== "" ? Number(pricePerNight) : null,
+          pricePerWeek: pricePerWeek !== "" ? Number(pricePerWeek) : null,
+          pricePerMonth: pricePerMonth !== "" ? Number(pricePerMonth) : null,
 
-          availableFrom: availableFrom || undefined,
-          availableTo: availableTo || undefined,
-          minStayNights: minStayNights ? Number(minStayNights) : undefined,
-          maxStayNights: maxStayNights ? Number(maxStayNights) : undefined,
+          availableFrom: availableFrom ? new Date(availableFrom) : null,
+          availableTo: availableTo ? new Date(availableTo) : null,
+          minStayNights: minStayNights !== "" ? Number(minStayNights) : null,
+          maxStayNights: maxStayNights !== "" ? Number(maxStayNights) : null,
 
-          rentalType: rentalType || undefined,
+          rentalType,
           isRefundable,
-          cancellationPolicy: cancellationPolicy || undefined,
-          depositAmount: depositAmount ? Number(depositAmount) : undefined,
-          depositCurrency: depositCurrency || undefined,
+          cancellationPolicy,
 
-          genderPreference: genderPreference || undefined,
+          depositAmount: depositAmount !== "" ? Number(depositAmount) : null,
+          depositCurrency,
+
+          genderPreference,
           allowsSmoking,
           allowsPets,
 
           latitude,
           longitude,
 
-          amenities: amenities ? amenities.split(",").map((a) => a.trim()) : [],
-          images: images ? images.split(",").map((i) => i.trim()) : [],
+          amenities: amenities
+            ? amenities
+                .split(",")
+                .map((a) => a.trim())
+                .filter(Boolean)
+            : [],
+
+          images,
           tour3DUrl,
         }),
       });
@@ -410,8 +511,7 @@ export default function EditListingPage() {
       }
 
       router.push("/renter/listings");
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
       setError("Something went wrong");
       setSaving(false);
     }
@@ -436,6 +536,9 @@ export default function EditListingPage() {
 
       <form onSubmit={handleSubmit}>
         {error && <div className="alert alert-danger">{error}</div>}
+        {uploadError && (
+          <div className="alert alert-warning">{uploadError}</div>
+        )}
 
         {/* BASIC */}
         <div className="mb-3">
@@ -573,7 +676,10 @@ export default function EditListingPage() {
               type="number"
               className="form-control"
               value={pricePerNight}
-              onChange={(e) => setPricePerNight(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "" || Number(v) >= 0) setPricePerNight(v);
+              }}
               min={0}
             />
           </div>
@@ -762,15 +868,102 @@ export default function EditListingPage() {
           />
         </div>
 
+        {/* IMAGES - DRAG & DROP + PREVIEW */}
         <div className="mb-3">
           <label className="form-label">
-            Image URLs (comma separated for now)
+            Images{" "}
+            {uploading && (
+              <span className="text-muted small ms-1">(uploading...)</span>
+            )}
           </label>
-          <input
-            className="form-control"
-            value={images}
-            onChange={(e) => setImages(e.target.value)}
-          />
+
+          {/* Drag & drop area */}
+          <div
+            className={`border rounded p-3 text-center ${
+              isDragging ? "bg-light border-primary" : "bg-white"
+            }`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            style={{ cursor: "pointer" }}
+            onClick={() => {
+              const input = document.getElementById(
+                "edit-image-file-input"
+              ) as HTMLInputElement | null;
+              input?.click();
+            }}
+          >
+            <p className="mb-1 fw-semibold">Drag & drop images here</p>
+            <p className="mb-2 text-muted small">or click to browse</p>
+            <input
+              id="edit-image-file-input"
+              type="file"
+              accept="image/*"
+              multiple
+              className="d-none"
+              onChange={(e) => handleFilesSelected(e.target.files)}
+            />
+          </div>
+
+          {/* Optional: add URL manually */}
+          <div className="input-group mt-2">
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Or paste an image URL and press Add"
+              id="edit-image-url-input"
+            />
+            <button
+              type="button"
+              className="btn btn-outline-secondary"
+              onClick={() => {
+                const input = document.getElementById(
+                  "edit-image-url-input"
+                ) as HTMLInputElement | null;
+                if (!input) return;
+                if (input.value.trim()) {
+                  addImageUrl(input.value);
+                  input.value = "";
+                }
+              }}
+            >
+              Add
+            </button>
+          </div>
+
+          {/* Preview thumbnails */}
+          {images.length > 0 && (
+            <div className="mt-3 d-flex flex-wrap gap-3">
+              {images.map((src, idx) => (
+                <div
+                  key={idx}
+                  className="position-relative"
+                  style={{ width: 100, height: 100 }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={src}
+                    alt={`Image ${idx + 1}`}
+                    className="img-fluid rounded"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      border: "1px solid #dee2e6",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-danger position-absolute top-0 end-0 translate-middle"
+                    style={{ borderRadius: "50%", padding: "0.15rem 0.35rem" }}
+                    onClick={() => removeImage(idx)}
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="mb-4">
@@ -782,7 +975,7 @@ export default function EditListingPage() {
           />
         </div>
 
-        <button className="btn btn-primary" disabled={saving}>
+        <button className="btn btn-primary" disabled={saving || uploading}>
           {saving ? "Saving..." : "Save Changes"}
         </button>
       </form>

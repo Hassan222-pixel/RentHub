@@ -9,12 +9,14 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-// Minimal shape of the user object we care about here
 type CurrentUser = {
   _id: string;
-  role: string; // or: "renter" | "admin" | "super-admin" | "manager" | "client"
+  role: string;
 };
 
+//
+// ✅ GET SINGLE LISTING BY ID
+//
 export async function GET(_req: Request, context: RouteContext) {
   try {
     await connectToDatabase();
@@ -25,8 +27,16 @@ export async function GET(_req: Request, context: RouteContext) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await context.params; // ✅ await params
-    const dorm = await Dorm.findOne({ _id: id, owner: user._id }).lean();
+    const { id } = await context.params;
+
+    const dorm = await Dorm.findOne({
+      _id: id,
+      owner: user._id,
+      // if you use soft delete, keep only active ones:
+      // isActive: true,
+    })
+      .lean()
+      .exec();
 
     if (!dorm) {
       return NextResponse.json({ message: "Not found" }, { status: 404 });
@@ -42,6 +52,9 @@ export async function GET(_req: Request, context: RouteContext) {
   }
 }
 
+//
+// ✅ UPDATE
+//
 export async function PUT(req: Request, context: RouteContext) {
   try {
     await connectToDatabase();
@@ -52,14 +65,14 @@ export async function PUT(req: Request, context: RouteContext) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await context.params; // ✅ await params
+    const { id } = await context.params;
     const body = await req.json();
 
     const dorm = await Dorm.findOneAndUpdate(
       { _id: id, owner: user._id },
       body,
       { new: true }
-    );
+    ).exec();
 
     if (!dorm) {
       return NextResponse.json({ message: "Not found" }, { status: 404 });
@@ -75,7 +88,9 @@ export async function PUT(req: Request, context: RouteContext) {
   }
 }
 
-// soft delete / deactivate
+//
+// ✅ HARD DELETE (remove completely)
+//
 export async function DELETE(_req: Request, context: RouteContext) {
   try {
     await connectToDatabase();
@@ -86,15 +101,14 @@ export async function DELETE(_req: Request, context: RouteContext) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await context.params; // ✅ await params
+    const { id } = await context.params;
 
-    const dorm = await Dorm.findOneAndUpdate(
-      { _id: id, owner: user._id },
-      { isActive: false },
-      { new: true }
-    );
+    const deleted = await Dorm.findOneAndDelete({
+      _id: id,
+      owner: user._id,
+    }).exec();
 
-    if (!dorm) {
+    if (!deleted) {
       return NextResponse.json({ message: "Not found" }, { status: 404 });
     }
 
@@ -102,7 +116,7 @@ export async function DELETE(_req: Request, context: RouteContext) {
   } catch (err) {
     console.error("DELETE /api/renter/listings/[id] error:", err);
     return NextResponse.json(
-      { message: "Failed to deactivate listing" },
+      { message: "Failed to delete listing" },
       { status: 500 }
     );
   }

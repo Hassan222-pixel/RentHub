@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/renter/listings/new/page.tsx
 "use client";
 
@@ -59,13 +60,18 @@ export default function NewListingPage() {
 
   // EXTRAS
   const [amenities, setAmenities] = useState("");
-  const [images, setImages] = useState("");
+  const [images, setImages] = useState<string[]>([]);
   const [tour3DUrl, setTour3DUrl] = useState("");
+
+  // DRAG & DROP STATE
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   // MAP + LOCATION SEARCH
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const markerRef = useRef<mapboxgl.Marker | null>(null);
+  const mapRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<MapboxFeature[]>([]);
@@ -76,6 +82,77 @@ export default function NewListingPage() {
 
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // =========================
+  // IMAGE UPLOAD HANDLERS (NO BASE64)
+  // =========================
+  const uploadImage = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Upload failed");
+    }
+
+    setImages((prev) => [...prev, data.url as string]);
+  };
+
+  const handleFilesSelected = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    setUploadError("");
+    setUploading(true);
+
+    try {
+      const fileArray = Array.from(files);
+      for (const file of fileArray) {
+        if (!file.type.startsWith("image/")) continue;
+        await uploadImage(file);
+      }
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      setUploadError(err.message || "Image upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDrop = async (e: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer?.files as FileList | null;
+    await handleFilesSelected(files);
+  };
+
+  const handleDragOver = (e: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addImageUrl = (url: string) => {
+    if (!url.trim()) return;
+    setImages((prev) => [...prev, url.trim()]);
+  };
 
   // =========================
   // INIT MAPBOX MAP
@@ -89,7 +166,7 @@ export default function NewListingPage() {
     if (mapRef.current) return; // already initialized
 
     (async () => {
-      const mapboxgl = (await import("mapbox-gl")).default;
+      const mapboxgl = (await import("mapbox-gl")).default as any;
       mapboxgl.accessToken = MAPBOX_TOKEN;
 
       const initialCenter: [number, number] = [35.8623, 33.8547]; // Lebanon center approx [lng, lat]
@@ -107,7 +184,7 @@ export default function NewListingPage() {
       map.addControl(new mapboxgl.NavigationControl(), "top-right");
 
       // Click on map to set marker & reverse-set lat/lng (optional)
-      map.on("click", (e) => {
+      map.on("click", (e: any) => {
         const { lng, lat } = e.lngLat;
         setLatitude(lat);
         setLongitude(lng);
@@ -145,7 +222,7 @@ export default function NewListingPage() {
     });
 
     (async () => {
-      const mapboxgl = (await import("mapbox-gl")).default;
+      const mapboxgl = (await import("mapbox-gl")).default as any;
       if (!markerRef.current) {
         markerRef.current = new mapboxgl.Marker({
           color: "#0b74de",
@@ -232,33 +309,40 @@ export default function NewListingPage() {
           address,
           university,
 
-          roomType: roomType || undefined,
-          maxOccupants: maxOccupants ? Number(maxOccupants) : undefined,
+          roomType,
+          maxOccupants: maxOccupants !== "" ? Number(maxOccupants) : null,
 
-          pricePerNight: pricePerNight ? Number(pricePerNight) : undefined,
-          pricePerWeek: pricePerWeek ? Number(pricePerWeek) : undefined,
-          pricePerMonth: pricePerMonth ? Number(pricePerMonth) : undefined,
+          pricePerNight: pricePerNight !== "" ? Number(pricePerNight) : null,
+          pricePerWeek: pricePerWeek !== "" ? Number(pricePerWeek) : null,
+          pricePerMonth: pricePerMonth !== "" ? Number(pricePerMonth) : null,
 
-          availableFrom: availableFrom || undefined,
-          availableTo: availableTo || undefined,
-          minStayNights: minStayNights ? Number(minStayNights) : undefined,
-          maxStayNights: maxStayNights ? Number(maxStayNights) : undefined,
+          availableFrom: availableFrom ? new Date(availableFrom) : null,
+          availableTo: availableTo ? new Date(availableTo) : null,
+          minStayNights: minStayNights !== "" ? Number(minStayNights) : null,
+          maxStayNights: maxStayNights !== "" ? Number(maxStayNights) : null,
 
-          rentalType: rentalType || undefined,
+          rentalType,
           isRefundable,
-          cancellationPolicy: cancellationPolicy || undefined,
-          depositAmount: depositAmount ? Number(depositAmount) : undefined,
-          depositCurrency: depositCurrency || undefined,
+          cancellationPolicy,
 
-          genderPreference: genderPreference || undefined,
+          depositAmount: depositAmount !== "" ? Number(depositAmount) : null,
+          depositCurrency,
+
+          genderPreference,
           allowsSmoking,
           allowsPets,
 
           latitude,
           longitude,
 
-          amenities: amenities ? amenities.split(",").map((a) => a.trim()) : [],
-          images: images ? images.split(",").map((i) => i.trim()) : [],
+          amenities: amenities
+            ? amenities
+                .split(",")
+                .map((a) => a.trim())
+                .filter(Boolean)
+            : [],
+
+          images,
           tour3DUrl,
         }),
       });
@@ -298,6 +382,9 @@ export default function NewListingPage() {
 
       <form onSubmit={handleSubmit}>
         {error && <div className="alert alert-danger">{error}</div>}
+        {uploadError && (
+          <div className="alert alert-warning">{uploadError}</div>
+        )}
 
         {/* BASIC INFO */}
         <div className="mb-3">
@@ -437,7 +524,10 @@ export default function NewListingPage() {
               type="number"
               className="form-control"
               value={pricePerNight}
-              onChange={(e) => setPricePerNight(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "" || Number(v) >= 0) setPricePerNight(v);
+              }}
               min={0}
             />
           </div>
@@ -447,7 +537,10 @@ export default function NewListingPage() {
               type="number"
               className="form-control"
               value={pricePerWeek}
-              onChange={(e) => setPricePerWeek(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "" || Number(v) >= 0) setPricePerWeek(v);
+              }}
               min={0}
             />
           </div>
@@ -457,7 +550,10 @@ export default function NewListingPage() {
               type="number"
               className="form-control"
               value={pricePerMonth}
-              onChange={(e) => setPricePerMonth(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "" || Number(v) >= 0) setPricePerMonth(v);
+              }}
               min={0}
             />
           </div>
@@ -626,15 +722,102 @@ export default function NewListingPage() {
           />
         </div>
 
+        {/* IMAGES - DRAG & DROP + PREVIEW */}
         <div className="mb-3">
           <label className="form-label">
-            Image URLs (comma separated for now)
+            Images{" "}
+            {uploading && (
+              <span className="text-muted small ms-1">(uploading...)</span>
+            )}
           </label>
-          <input
-            className="form-control"
-            value={images}
-            onChange={(e) => setImages(e.target.value)}
-          />
+
+          {/* Drag & drop area */}
+          <div
+            className={`border rounded p-3 text-center ${
+              isDragging ? "bg-light border-primary" : "bg-white"
+            }`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            style={{ cursor: "pointer" }}
+            onClick={() => {
+              const input = document.getElementById(
+                "image-file-input"
+              ) as HTMLInputElement | null;
+              input?.click();
+            }}
+          >
+            <p className="mb-1 fw-semibold">Drag & drop images here</p>
+            <p className="mb-2 text-muted small">or click to browse</p>
+            <input
+              id="image-file-input"
+              type="file"
+              accept="image/*"
+              multiple
+              className="d-none"
+              onChange={(e) => handleFilesSelected(e.target.files)}
+            />
+          </div>
+
+          {/* Optional: add URL manually */}
+          <div className="input-group mt-2">
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Or paste an image URL and press Add"
+              id="image-url-input"
+            />
+            <button
+              type="button"
+              className="btn btn-outline-secondary"
+              onClick={() => {
+                const input = document.getElementById(
+                  "image-url-input"
+                ) as HTMLInputElement | null;
+                if (!input) return;
+                if (input.value.trim()) {
+                  addImageUrl(input.value);
+                  input.value = "";
+                }
+              }}
+            >
+              Add
+            </button>
+          </div>
+
+          {/* Preview thumbnails */}
+          {images.length > 0 && (
+            <div className="mt-3 d-flex flex-wrap gap-3">
+              {images.map((src, idx) => (
+                <div
+                  key={idx}
+                  className="position-relative"
+                  style={{ width: 100, height: 100 }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={src}
+                    alt={`Image ${idx + 1}`}
+                    className="img-fluid rounded"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      border: "1px solid #dee2e6",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-danger position-absolute top-0 end-0 translate-middle"
+                    style={{ borderRadius: "50%", padding: "0.15rem 0.35rem" }}
+                    onClick={() => removeImage(idx)}
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="mb-4">
@@ -646,7 +829,7 @@ export default function NewListingPage() {
           />
         </div>
 
-        <button className="btn btn-primary" disabled={saving}>
+        <button className="btn btn-primary" disabled={saving || uploading}>
           {saving ? "Saving..." : "Create Listing"}
         </button>
       </form>
