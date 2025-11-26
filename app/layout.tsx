@@ -1,18 +1,26 @@
-// app/layout.tsx
 import type { Metadata } from "next";
-import "bootstrap/dist/css/bootstrap.min.css";
 import "./globals.css";
-import { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "RentHub Admin",
-  description: "RentHub Admin Dashboard with role-based access",
+  title: "RentHub",
+  description: "Dormitory booking platform",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
-      <body className="renthub-body">{children}</body>
+      <head>
+        {/* Template CSS */}
+        <link rel="stylesheet" href="/template/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="/template/css/style.css" />
+        <link rel="stylesheet" href="/template/css/responsive.css" />
+        <link rel="stylesheet" href="/template/css/jquery.mCustomScrollbar.min.css" />
+      </head>
+      <body>{children}</body>
     </html>
   );
 }
