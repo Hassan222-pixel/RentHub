@@ -17,6 +17,7 @@ import {
   FiMonitor,
   FiLogOut,
   FiMenu,
+  FiMapPin, // 👈 NEW
 } from "react-icons/fi";
 
 interface User {
@@ -62,14 +63,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   // Theme load
   useEffect(() => {
-    const stored = (localStorage.getItem("renthub-theme") as ThemeOption) || "system";
+    const stored =
+      (localStorage.getItem("renthub-theme") as ThemeOption) || "system";
     setTheme(stored);
     applyTheme(stored);
   }, []);
 
   const applyTheme = (value: ThemeOption) => {
-    if (value === "light") document.documentElement.setAttribute("data-theme", "light");
-    else if (value === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    if (value === "light")
+      document.documentElement.setAttribute("data-theme", "light");
+    else if (value === "dark")
+      document.documentElement.setAttribute("data-theme", "dark");
     else document.documentElement.removeAttribute("data-theme");
   };
 
@@ -126,12 +130,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
 
         <div className="d-flex align-items-center gap-3">
-
           <button
             className="renthub-theme-btn"
             onClick={() => setThemeMenuOpen((o) => !o)}
           >
-            {theme === "light" ? <FiSun /> : theme === "dark" ? <FiMoon /> : <FiMonitor />}
+            {theme === "light" ? (
+              <FiSun />
+            ) : theme === "dark" ? (
+              <FiMoon />
+            ) : (
+              <FiMonitor />
+            )}
           </button>
 
           {themeMenuOpen && (
@@ -170,7 +179,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <div className="renthub-sidebar-avatar">{avatarInitial}</div>
             <div>
               <div className="renthub-sidebar-name">{user.name}</div>
-              <div className="renthub-sidebar-role text-uppercase">{user.role}</div>
+              <div className="renthub-sidebar-role text-uppercase">
+                {user.role}
+              </div>
             </div>
           </div>
 
@@ -178,7 +189,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <p className="renthub-nav-section-label">Navigation</p>
 
             <ul className="list-unstyled">
-
               {/* HOME */}
               <li>
                 <Link
@@ -189,7 +199,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   }
                   onClick={handleNavClick}
                 >
-                  <FiHome /><span>Home</span>
+                  <FiHome />
+                  <span>Home</span>
                 </Link>
               </li>
 
@@ -206,7 +217,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     }
                     onClick={handleNavClick}
                   >
-                    <FiDollarSign /><span>Accounts</span>
+                    <FiDollarSign />
+                    <span>Accounts</span>
                   </Link>
                 </li>
               )}
@@ -224,7 +236,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     }
                     onClick={handleNavClick}
                   >
-                    <FiUsers /><span>Managers</span>
+                    <FiUsers />
+                    <span>Managers</span>
                   </Link>
                 </li>
               )}
@@ -242,11 +255,30 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     }
                     onClick={handleNavClick}
                   >
-                    <FiUser /><span>Admin Users</span>
+                    <FiUser />
+                    <span>Admin Users</span>
                   </Link>
                 </li>
               )}
 
+              {/* UNIVERSITIES – متاحة لكل الـ admin roles */}
+              {(isSuperAdmin || isAccountsAdmin || isManagersAdmin) && (
+                <li>
+                  <Link
+                    href="/dashboard/universities"
+                    className={
+                      "renthub-nav-link" +
+                      (isActive("/dashboard/universities")
+                        ? " renthub-nav-link-active"
+                        : "")
+                    }
+                    onClick={handleNavClick}
+                  >
+                    <FiMapPin />
+                    <span>Universities</span>
+                  </Link>
+                </li>
+              )}
             </ul>
           </nav>
 
@@ -264,7 +296,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <span className="renthub-logout-label">Logout</span>
             </button>
           </div>
-
         </aside>
 
         {/* Backdrop for mobile sidebar */}

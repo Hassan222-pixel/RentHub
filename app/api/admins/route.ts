@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       "managers-admin",
       "renter",
     ];
-
+    
     if (!ALLOWED_ROLES.includes(role)) {
       return NextResponse.json({ message: "Invalid role" }, { status: 400 });
     }

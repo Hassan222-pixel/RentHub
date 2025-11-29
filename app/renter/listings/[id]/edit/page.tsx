@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // app/renter/listings/[id]/edit/page.tsx
@@ -6,8 +7,7 @@
 import { useRouter, useParams } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
-type RoomType = "room" | "bed" | "studio" | "apartment" | "";
-type RentalType = "daily" | "weekly" | "monthly" | "flexible" | "";
+type RoomType = "private" | "double" | "shared" | "";
 type GenderPreference = "any" | "male" | "female" | "";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN as string;
@@ -20,33 +20,35 @@ interface Dorm {
   address?: string;
   university?: string;
 
+  // ROOM
   roomType?: RoomType;
   maxOccupants?: number;
+  genderPreference?: GenderPreference;
+  allowsSmoking?: boolean;
+  allowsPets?: boolean;
+  houseRules?: string;
 
+  // PRICING
   pricePerNight?: number;
   pricePerWeek?: number;
   pricePerMonth?: number;
 
+  // AVAILABILITY
   availableFrom?: string;
-  availableTo?: string;
   minStayNights?: number;
-  maxStayNights?: number;
 
-  rentalType?: RentalType;
-  isRefundable?: boolean;
-  cancellationPolicy?: string;
+  // DEPOSIT
   depositAmount?: number;
   depositCurrency?: string;
 
-  genderPreference?: GenderPreference;
-  allowsSmoking?: boolean;
-  allowsPets?: boolean;
-
+  // LOCATION
   latitude?: number;
   longitude?: number;
 
+  // EXTRAS
   amenities?: string[];
   images?: string[];
+  profileImg?: string;
   tour3DUrl?: string;
 }
 
@@ -77,7 +79,11 @@ export default function EditListingPage() {
 
   // ROOM
   const [roomType, setRoomType] = useState<RoomType>("");
-  const [maxOccupants, setMaxOccupants] = useState("");
+  const [genderPreference, setGenderPreference] =
+    useState<GenderPreference>("any");
+  const [allowsSmoking, setAllowsSmoking] = useState(false);
+  const [allowsPets, setAllowsPets] = useState(false);
+  const [houseRules, setHouseRules] = useState("");
 
   // PRICING
   const [pricePerNight, setPricePerNight] = useState("");
@@ -86,27 +92,19 @@ export default function EditListingPage() {
 
   // AVAILABILITY
   const [availableFrom, setAvailableFrom] = useState("");
-  const [availableTo, setAvailableTo] = useState("");
   const [minStayNights, setMinStayNights] = useState("");
-  const [maxStayNights, setMaxStayNights] = useState("");
 
-  // TERMS
-  const [rentalType, setRentalType] = useState<RentalType>("flexible");
-  const [isRefundable, setIsRefundable] = useState(true);
-  const [cancellationPolicy, setCancellationPolicy] = useState("");
+  // DEPOSIT
   const [depositAmount, setDepositAmount] = useState("");
   const [depositCurrency, setDepositCurrency] = useState("USD");
-
-  // RULES
-  const [genderPreference, setGenderPreference] =
-    useState<GenderPreference>("any");
-  const [allowsSmoking, setAllowsSmoking] = useState(false);
-  const [allowsPets, setAllowsPets] = useState(false);
 
   // EXTRAS
   const [amenities, setAmenities] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [tour3DUrl, setTour3DUrl] = useState("");
+
+  const [profileImg, setProfileImg] = useState("");
+  const [profileUploading, setProfileUploading] = useState(false);
 
   // DRAG & DROP
   const [isDragging, setIsDragging] = useState(false);
@@ -128,6 +126,30 @@ export default function EditListingPage() {
   // =========================
   // IMAGE UPLOAD HANDLERS (NO BASE64)
   // =========================
+
+  const uploadProfileImg = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    setProfileUploading(true);
+
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json();
+
+    setProfileUploading(false);
+
+    if (!res.ok) {
+      alert("Failed to upload profile image");
+      return;
+    }
+
+    setProfileImg(data.url); // 👈 save uploaded URL
+  };
+
   const uploadImage = async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -211,8 +233,6 @@ export default function EditListingPage() {
         const res = await fetch(`/api/renter/listings/${id}`);
         const data = await res.json();
 
-        console.log("Edit listing response:", data); // 👈 see what the API returns
-
         if (!res.ok) {
           setError(data.message || "Failed to load listing");
           setLoading(false);
@@ -221,24 +241,29 @@ export default function EditListingPage() {
 
         const dorm: Dorm | undefined = data.dorm;
 
-        // 👇 Extra safety: if API returns 200 but no dorm
         if (!dorm) {
           setError("Listing not found");
           setLoading(false);
           return;
         }
 
+        // BASIC
         setTitle(dorm.title || "");
         setDescription(dorm.description || "");
         setCity(dorm.city || "");
         setAddress(dorm.address || "");
         setUniversity(dorm.university || "");
 
+        // ROOM
         setRoomType((dorm.roomType as RoomType) || "");
-        setMaxOccupants(
-          dorm.maxOccupants !== undefined ? String(dorm.maxOccupants) : ""
+        setGenderPreference(
+          (dorm.genderPreference as GenderPreference) || "any"
         );
+        setAllowsSmoking(dorm.allowsSmoking ?? false);
+        setAllowsPets(dorm.allowsPets ?? false);
+        setHouseRules(dorm.houseRules || "");
 
+        // PRICING
         setPricePerNight(
           dorm.pricePerNight !== undefined ? String(dorm.pricePerNight) : ""
         );
@@ -249,42 +274,28 @@ export default function EditListingPage() {
           dorm.pricePerMonth !== undefined ? String(dorm.pricePerMonth) : ""
         );
 
+        // AVAILABILITY
         if (dorm.availableFrom) {
           const d = new Date(dorm.availableFrom);
           setAvailableFrom(d.toISOString().slice(0, 10));
         }
-        if (dorm.availableTo) {
-          const d = new Date(dorm.availableTo);
-          setAvailableTo(d.toISOString().slice(0, 10));
-        }
-
         setMinStayNights(
           dorm.minStayNights !== undefined ? String(dorm.minStayNights) : ""
         );
-        setMaxStayNights(
-          dorm.maxStayNights !== undefined ? String(dorm.maxStayNights) : ""
-        );
 
-        setRentalType((dorm.rentalType as RentalType) || "flexible");
-        setIsRefundable(
-          dorm.isRefundable !== undefined ? dorm.isRefundable : true
-        );
-        setCancellationPolicy(dorm.cancellationPolicy || "");
+        // DEPOSIT
         setDepositAmount(
           dorm.depositAmount !== undefined ? String(dorm.depositAmount) : ""
         );
         setDepositCurrency(dorm.depositCurrency || "USD");
 
-        setGenderPreference(
-          (dorm.genderPreference as GenderPreference) || "any"
-        );
-        setAllowsSmoking(dorm.allowsSmoking ?? false);
-        setAllowsPets(dorm.allowsPets ?? false);
-
+        // AMENITIES / MEDIA
         setAmenities(dorm.amenities?.join(", ") || "");
-        setImages(dorm.images || []); // URLs from DB
+        setImages(dorm.images || []);
         setTour3DUrl(dorm.tour3DUrl || "");
+        setProfileImg(dorm.profileImg || "");
 
+        // LOCATION
         if (typeof dorm.latitude === "number") {
           setLatitude(dorm.latitude);
         }
@@ -306,7 +317,7 @@ export default function EditListingPage() {
   // INIT MAP (after data is loaded)
   // =========================
   useEffect(() => {
-    if (loading) return; // wait until dorm is loaded
+    if (loading) return;
     if (!MAPBOX_TOKEN) {
       console.warn("Missing NEXT_PUBLIC_MAPBOX_TOKEN");
       return;
@@ -445,6 +456,14 @@ export default function EditListingPage() {
     setAddress(feature.text);
   };
 
+  // helper to keep same logic as "new" page
+  const getMaxOccupantsFromRoomType = (type: RoomType): number | null => {
+    if (type === "private") return 1;
+    if (type === "double") return 2;
+    if (type === "shared") return 3; // or 4
+    return null;
+  };
+
   // =========================
   // SUBMIT
   // =========================
@@ -453,7 +472,21 @@ export default function EditListingPage() {
     setError("");
     setSaving(true);
 
+    if (!title || !description || !city) {
+      setError("Title, description and city are required");
+      setSaving(false);
+      return;
+    }
+
+    if (!pricePerNight && !pricePerWeek && !pricePerMonth) {
+      setError("Please provide at least one price (night/week/month)");
+      setSaving(false);
+      return;
+    }
+
     try {
+      const maxOccupants = getMaxOccupantsFromRoomType(roomType);
+
       const res = await fetch(`/api/renter/listings/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -465,20 +498,14 @@ export default function EditListingPage() {
           university,
 
           roomType,
-          maxOccupants: maxOccupants !== "" ? Number(maxOccupants) : null,
+          maxOccupants,
 
           pricePerNight: pricePerNight !== "" ? Number(pricePerNight) : null,
           pricePerWeek: pricePerWeek !== "" ? Number(pricePerWeek) : null,
           pricePerMonth: pricePerMonth !== "" ? Number(pricePerMonth) : null,
 
-          availableFrom: availableFrom ? new Date(availableFrom) : null,
-          availableTo: availableTo ? new Date(availableTo) : null,
+          availableFrom: availableFrom || null,
           minStayNights: minStayNights !== "" ? Number(minStayNights) : null,
-          maxStayNights: maxStayNights !== "" ? Number(maxStayNights) : null,
-
-          rentalType,
-          isRefundable,
-          cancellationPolicy,
 
           depositAmount: depositAmount !== "" ? Number(depositAmount) : null,
           depositCurrency,
@@ -486,6 +513,7 @@ export default function EditListingPage() {
           genderPreference,
           allowsSmoking,
           allowsPets,
+          houseRules,
 
           latitude,
           longitude,
@@ -498,6 +526,7 @@ export default function EditListingPage() {
             : [],
 
           images,
+          profileImg,
           tour3DUrl,
         }),
       });
@@ -512,6 +541,7 @@ export default function EditListingPage() {
 
       router.push("/renter/listings");
     } catch (error) {
+      console.error(error);
       setError("Something went wrong");
       setSaving(false);
     }
@@ -648,7 +678,7 @@ export default function EditListingPage() {
 
         {/* ROOM DETAILS */}
         <div className="row">
-          <div className="mb-3 col-md-6">
+          <div className="mb-3 col-md-4">
             <label className="form-label">Room Type</label>
             <select
               className="form-select"
@@ -656,22 +686,67 @@ export default function EditListingPage() {
               onChange={(e) => setRoomType(e.target.value as RoomType)}
             >
               <option value="">Select type</option>
-              <option value="room">Private room</option>
-              <option value="bed">Bed in shared room</option>
-              <option value="studio">Studio</option>
-              <option value="apartment">Full apartment</option>
+              <option value="private">Private room</option>
+              <option value="double">Double room</option>
+              <option value="shared">Shared room</option>
             </select>
           </div>
-          <div className="mb-3 col-md-6">
-            <label className="form-label">Max Occupants</label>
-            <input
-              type="number"
-              className="form-control"
-              value={maxOccupants}
-              onChange={(e) => setMaxOccupants(e.target.value)}
-              min={1}
-            />
+
+          <div className="mb-3 col-md-4">
+            <label className="form-label">Gender Preference</label>
+            <select
+              className="form-select"
+              value={genderPreference}
+              onChange={(e) =>
+                setGenderPreference(e.target.value as GenderPreference)
+              }
+            >
+              <option value="any">Any</option>
+              <option value="male">Male only</option>
+              <option value="female">Female only</option>
+            </select>
           </div>
+
+          <div className="mb-3 col-md-4 d-flex align-items-center">
+            <div className="d-flex flex-column gap-2 mt-3 mt-md-0">
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="allowsSmoking"
+                  checked={allowsSmoking}
+                  onChange={(e) => setAllowsSmoking(e.target.checked)}
+                />
+                <label className="form-check-label" htmlFor="allowsSmoking">
+                  Smoking allowed
+                </label>
+              </div>
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="allowsPets"
+                  checked={allowsPets}
+                  onChange={(e) => setAllowsPets(e.target.checked)}
+                />
+                <label className="form-check-label" htmlFor="allowsPets">
+                  Pets allowed
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* HOUSE RULES */}
+        <div className="mb-3">
+          <label className="form-label">Other Rules / Notes</label>
+          <textarea
+            className="form-control"
+            rows={3}
+            placeholder="e.g. No loud music after 11pm, no visitors after midnight..."
+            value={houseRules}
+            onChange={(e) => setHouseRules(e.target.value)}
+          />
         </div>
 
         {/* PRICING */}
@@ -695,7 +770,10 @@ export default function EditListingPage() {
               type="number"
               className="form-control"
               value={pricePerWeek}
-              onChange={(e) => setPricePerWeek(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "" || Number(v) >= 0) setPricePerWeek(v);
+              }}
               min={0}
             />
           </div>
@@ -705,7 +783,10 @@ export default function EditListingPage() {
               type="number"
               className="form-control"
               value={pricePerMonth}
-              onChange={(e) => setPricePerMonth(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "" || Number(v) >= 0) setPricePerMonth(v);
+              }}
               min={0}
             />
           </div>
@@ -713,7 +794,7 @@ export default function EditListingPage() {
 
         {/* AVAILABILITY */}
         <div className="row">
-          <div className="mb-3 col-md-3">
+          <div className="mb-3 col-md-6">
             <label className="form-label">Available From</label>
             <input
               type="date"
@@ -722,16 +803,7 @@ export default function EditListingPage() {
               onChange={(e) => setAvailableFrom(e.target.value)}
             />
           </div>
-          <div className="mb-3 col-md-3">
-            <label className="form-label">Available To</label>
-            <input
-              type="date"
-              className="form-control"
-              value={availableTo}
-              onChange={(e) => setAvailableTo(e.target.value)}
-            />
-          </div>
-          <div className="mb-3 col-md-3">
+          <div className="mb-3 col-md-6">
             <label className="form-label">Min Stay (nights)</label>
             <input
               type="number"
@@ -741,124 +813,28 @@ export default function EditListingPage() {
               min={1}
             />
           </div>
-          <div className="mb-3 col-md-3">
-            <label className="form-label">Max Stay (nights)</label>
+        </div>
+
+        {/* DEPOSIT */}
+        <div className="mb-3">
+          <label className="form-label">Deposit (optional)</label>
+          <div className="input-group">
             <input
               type="number"
               className="form-control"
-              value={maxStayNights}
-              onChange={(e) => setMaxStayNights(e.target.value)}
-              min={1}
+              value={depositAmount}
+              onChange={(e) => setDepositAmount(e.target.value)}
+              min={0}
             />
-          </div>
-        </div>
-
-        {/* TERMS */}
-        <div className="row">
-          <div className="mb-3 col-md-4">
-            <label className="form-label">Main Rental Type</label>
             <select
               className="form-select"
-              value={rentalType}
-              onChange={(e) => setRentalType(e.target.value as RentalType)}
+              style={{ maxWidth: "110px" }}
+              value={depositCurrency}
+              onChange={(e) => setDepositCurrency(e.target.value)}
             >
-              <option value="flexible">Flexible</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
+              <option value="USD">USD</option>
+              <option value="LBP">LBP</option>
             </select>
-          </div>
-          <div className="mb-3 col-md-4 d-flex align-items-center">
-            <div className="form-check mt-3 mt-md-4">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="isRefundable"
-                checked={isRefundable}
-                onChange={(e) => setIsRefundable(e.target.checked)}
-              />
-              <label className="form-check-label" htmlFor="isRefundable">
-                Refundable booking
-              </label>
-            </div>
-          </div>
-          <div className="mb-3 col-md-4">
-            <label className="form-label">Deposit Amount</label>
-            <div className="input-group">
-              <input
-                type="number"
-                className="form-control"
-                value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
-                min={0}
-              />
-              <select
-                className="form-select"
-                style={{ maxWidth: "110px" }}
-                value={depositCurrency}
-                onChange={(e) => setDepositCurrency(e.target.value)}
-              >
-                <option value="USD">USD</option>
-                <option value="LBP">LBP</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Cancellation Policy</label>
-          <textarea
-            className="form-control"
-            rows={3}
-            placeholder="E.g. Full refund up to 7 days before check-in..."
-            value={cancellationPolicy}
-            onChange={(e) => setCancellationPolicy(e.target.value)}
-          />
-        </div>
-
-        {/* RULES */}
-        <div className="row">
-          <div className="mb-3 col-md-4">
-            <label className="form-label">Gender Preference</label>
-            <select
-              className="form-select"
-              value={genderPreference}
-              onChange={(e) =>
-                setGenderPreference(e.target.value as GenderPreference)
-              }
-            >
-              <option value="any">Any</option>
-              <option value="male">Male only</option>
-              <option value="female">Female only</option>
-            </select>
-          </div>
-          <div className="mb-3 col-md-4 d-flex align-items-center">
-            <div className="form-check mt-3 mt-md-4">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="allowsSmoking"
-                checked={allowsSmoking}
-                onChange={(e) => setAllowsSmoking(e.target.checked)}
-              />
-              <label className="form-check-label" htmlFor="allowsSmoking">
-                Smoking allowed
-              </label>
-            </div>
-          </div>
-          <div className="mb-3 col-md-4 d-flex align-items-center">
-            <div className="form-check mt-3 mt-md-4">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="allowsPets"
-                checked={allowsPets}
-                onChange={(e) => setAllowsPets(e.target.checked)}
-              />
-              <label className="form-check-label" htmlFor="allowsPets">
-                Pets allowed
-              </label>
-            </div>
           </div>
         </div>
 
@@ -874,6 +850,35 @@ export default function EditListingPage() {
           />
         </div>
 
+        <div className="mb-3">
+          <label className="form-label">Profile Image</label>
+          <input
+            type="file"
+            accept="image/*"
+            className="form-control"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) uploadProfileImg(file);
+            }}
+          />
+
+          {profileUploading && <p className="text-muted">Uploading...</p>}
+
+          {profileImg && (
+            <img
+              src={profileImg}
+              alt="Profile"
+              style={{
+                width: 120,
+                height: 120,
+                marginTop: 10,
+                borderRadius: 8,
+                objectFit: "cover",
+              }}
+            />
+          )}
+        </div>
+
         {/* IMAGES - DRAG & DROP + PREVIEW */}
         <div className="mb-3">
           <label className="form-label">
@@ -883,7 +888,6 @@ export default function EditListingPage() {
             )}
           </label>
 
-          {/* Drag & drop area */}
           <div
             className={`border rounded p-3 text-center ${
               isDragging ? "bg-light border-primary" : "bg-white"
@@ -937,7 +941,6 @@ export default function EditListingPage() {
             </button>
           </div>
 
-          {/* Preview thumbnails */}
           {images.length > 0 && (
             <div className="mt-3 d-flex flex-wrap gap-3">
               {images.map((src, idx) => (
@@ -946,7 +949,6 @@ export default function EditListingPage() {
                   className="position-relative"
                   style={{ width: 100, height: 100 }}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={src}
                     alt={`Image ${idx + 1}`}

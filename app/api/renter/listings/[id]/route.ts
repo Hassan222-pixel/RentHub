@@ -1,4 +1,5 @@
 // app/api/renter/listings/[id]/route.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Dorm } from "@/models/Dorm";
@@ -32,8 +33,6 @@ export async function GET(_req: Request, context: RouteContext) {
     const dorm = await Dorm.findOne({
       _id: id,
       owner: user._id,
-      // if you use soft delete, keep only active ones:
-      // isActive: true,
     })
       .lean()
       .exec();
@@ -53,7 +52,7 @@ export async function GET(_req: Request, context: RouteContext) {
 }
 
 //
-// ✅ UPDATE
+// ✅ PUT — UPDATE SINGLE LISTING
 //
 export async function PUT(req: Request, context: RouteContext) {
   try {
@@ -68,9 +67,108 @@ export async function PUT(req: Request, context: RouteContext) {
     const { id } = await context.params;
     const body = await req.json();
 
+    const {
+      // BASIC
+      title,
+      description,
+      city,
+      address,
+      university,
+
+      // ROOM
+      roomType,
+      maxOccupants,
+      genderPreference,
+      allowsSmoking,
+      allowsPets,
+      houseRules,
+
+      // PRICING
+      pricePerNight,
+      pricePerWeek,
+      pricePerMonth,
+
+      // AVAILABILITY
+      availableFrom,
+      minStayNights,
+
+      // DEPOSIT
+      depositAmount,
+      depositCurrency,
+
+      // LOCATION
+      latitude,
+      longitude,
+
+      // MEDIA
+      amenities,
+      images,
+      profileImg,
+      tour3DUrl,
+    } = body;
+
+    // (Optional) server-side validation similar to POST
+    if (!title || !description || !city) {
+      return NextResponse.json(
+        { message: "Title, description and city are required" },
+        { status: 400 }
+      );
+    }
+
+    if (
+      pricePerNight == null &&
+      pricePerWeek == null &&
+      pricePerMonth == null
+    ) {
+      return NextResponse.json(
+        { message: "Please provide at least one price (night/week/month)" },
+        { status: 400 }
+      );
+    }
+
+    const updateData: any = {
+      // BASIC
+      title,
+      description,
+      city,
+      address,
+      university,
+
+      // ROOM
+      roomType,
+      maxOccupants,
+      genderPreference,
+      allowsSmoking,
+      allowsPets,
+      houseRules,
+
+      // PRICING
+      pricePerNight,
+      pricePerWeek,
+      pricePerMonth,
+
+      // AVAILABILITY
+      availableFrom: availableFrom || undefined,
+      minStayNights,
+
+      // DEPOSIT
+      depositAmount,
+      depositCurrency,
+
+      // LOCATION
+      latitude,
+      longitude,
+
+      // MEDIA / EXTRAS
+      amenities: Array.isArray(amenities) ? amenities : [],
+      images: Array.isArray(images) ? images : [],
+      profileImg,
+      tour3DUrl,
+    };
+
     const dorm = await Dorm.findOneAndUpdate(
       { _id: id, owner: user._id },
-      body,
+      updateData,
       { new: true }
     ).exec();
 
@@ -89,7 +187,7 @@ export async function PUT(req: Request, context: RouteContext) {
 }
 
 //
-// ✅ HARD DELETE (remove completely)
+// ✅ DELETE
 //
 export async function DELETE(_req: Request, context: RouteContext) {
   try {
