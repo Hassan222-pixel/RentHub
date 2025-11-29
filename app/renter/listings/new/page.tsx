@@ -19,6 +19,11 @@ interface MapboxFeature {
   context?: { id: string; text: string }[];
 }
 
+interface UniversityOption {
+  _id: string;
+  name: string;
+}
+
 export default function NewListingPage() {
   const router = useRouter();
 
@@ -80,6 +85,9 @@ export default function NewListingPage() {
 
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const [universities, setUniversities] = useState<UniversityOption[]>([]);
+  const [uniError, setUniError] = useState("");
 
   // =========================
   // IMAGE UPLOAD HANDLERS (NO BASE64)
@@ -229,6 +237,32 @@ export default function NewListingPage() {
         mapRef.current = null;
       }
     };
+  }, []);
+
+  //for university
+  // =========================
+  // LOAD UNIVERSITIES FOR DROPDOWN
+  // =========================
+  useEffect(() => {
+    const loadUniversities = async () => {
+      try {
+        setUniError("");
+        const res = await fetch("/api/universities");
+        const data = await res.json();
+
+        if (!res.ok) {
+          setUniError(data.message || "Failed to load universities");
+          return;
+        }
+
+        setUniversities(data.universities || []);
+      } catch (err) {
+        console.error("Error loading universities:", err);
+        setUniError("Failed to load universities");
+      }
+    };
+
+    loadUniversities();
   }, []);
 
   // When coordinates change from search → move marker
@@ -529,11 +563,21 @@ export default function NewListingPage() {
 
         <div className="mb-3">
           <label className="form-label">University</label>
-          <input
-            className="form-control"
+          <select
+            className="form-select"
             value={university}
             onChange={(e) => setUniversity(e.target.value)}
-          />
+          >
+            <option value="">Select university</option>
+            {universities.map((u) => (
+              <option key={u._id} value={u.name}>
+                {u.name}
+              </option>
+            ))}
+          </select>
+          {uniError && (
+            <small className="text-danger d-block mt-1">{uniError}</small>
+          )}
         </div>
 
         {/* ROOM DETAILS */}

@@ -5,7 +5,7 @@
 "use client";
 
 import { useRouter, useParams } from "next/navigation";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState, useMemo } from "react";
 
 type RoomType = "private" | "double" | "shared" | "";
 type GenderPreference = "any" | "male" | "female" | "";
@@ -60,6 +60,11 @@ interface MapboxFeature {
   context?: { id: string; text: string }[];
 }
 
+interface UniversityOption {
+  _id: string;
+  name: string;
+}
+
 export default function EditListingPage() {
   const router = useRouter();
   const params = useParams();
@@ -75,7 +80,13 @@ export default function EditListingPage() {
 
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
+
+  // UNIVERSITY VALUE (selected)
   const [university, setUniversity] = useState("");
+
+  // UNIVERSITY OPTIONS
+  const [universities, setUniversities] = useState<UniversityOption[]>([]);
+  const [uniError, setUniError] = useState("");
 
   // ROOM
   const [roomType, setRoomType] = useState<RoomType>("");
@@ -219,6 +230,31 @@ export default function EditListingPage() {
   };
 
   // =========================
+  // LOAD UNIVERSITIES FOR DROPDOWN
+  // =========================
+  useEffect(() => {
+    const loadUniversities = async () => {
+      try {
+        setUniError("");
+        const res = await fetch("/api/universities");
+        const data = await res.json();
+
+        if (!res.ok) {
+          setUniError(data.message || "Failed to load universities");
+          return;
+        }
+
+        setUniversities(data.universities || []);
+      } catch (err) {
+        console.error("Error loading universities:", err);
+        setUniError("Failed to load universities");
+      }
+    };
+
+    loadUniversities();
+  }, []);
+
+  // =========================
   // LOAD EXISTING DORM
   // =========================
   useEffect(() => {
@@ -312,6 +348,16 @@ export default function EditListingPage() {
 
     if (id) load();
   }, [id]);
+
+  // =========================
+  // MERGED UNIVERSITY OPTIONS (ensure current value is present)
+  // =========================
+  const universityOptions = useMemo(() => {
+    if (!university) return universities;
+    if (universities.some((u) => u.name === university)) return universities;
+    // add current value at top if not in list
+    return [{ _id: "current", name: university }, ...universities];
+  }, [universities, university]);
 
   // =========================
   // INIT MAP (after data is loaded)
@@ -495,7 +541,7 @@ export default function EditListingPage() {
           description,
           city,
           address,
-          university,
+          university, // 👈 string, not array
 
           roomType,
           maxOccupants,
@@ -669,11 +715,21 @@ export default function EditListingPage() {
         {/* UNIVERSITY */}
         <div className="mb-3">
           <label className="form-label">University</label>
-          <input
-            className="form-control"
+          <select
+            className="form-select"
             value={university}
             onChange={(e) => setUniversity(e.target.value)}
-          />
+          >
+            <option value="">Select university</option>
+            {universityOptions.map((u) => (
+              <option key={u._id} value={u.name}>
+                {u.name}
+              </option>
+            ))}
+          </select>
+          {uniError && (
+            <small className="text-danger d-block mt-1">{uniError}</small>
+          )}
         </div>
 
         {/* ROOM DETAILS */}
