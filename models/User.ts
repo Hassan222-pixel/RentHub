@@ -5,7 +5,8 @@ export type UserRole =
   | "super-admin"
   | "accounts-admin"
   | "managers-admin"
-  | "renter";
+  | "renter"
+  | "client"; // 👈 أضفنا client
 
 export interface IUser extends Document {
   name: string;
@@ -33,7 +34,13 @@ const UserSchema = new Schema<IUser>(
 
     role: {
       type: String,
-      enum: ["super-admin", "accounts-admin", "managers-admin", "renter"], // 👈 MUST include renter
+      enum: [
+        "super-admin",
+        "accounts-admin",
+        "managers-admin",
+        "renter",
+        "client", // 👈 هنا كمان
+      ],
       default: "super-admin",
     },
 
