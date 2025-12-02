@@ -1,23 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// app/api/dorms/[id]/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Dorm } from "@/models/Dorm";
 
-// نفس فكرة RouteContext اللي عندك
-type RouteContext = {
-  params: Promise<{ id: string }>;
-};
-
-export async function GET(_req: Request, context: RouteContext) {
+// For Next.js 16, params is a Promise and must be awaited
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     await connectToDatabase();
 
-    const { id } = await context.params;
+    // ✅ Await params to get the real id
+    const { id } = await params;
 
     const dormDoc = await Dorm.findById(id).lean();
 
-    // لو مش موجود أو مش active
+    // Not found or not active
     if (!dormDoc || (dormDoc as any).isActive === false) {
       return NextResponse.json({ message: "Dorm not found" }, { status: 404 });
     }
