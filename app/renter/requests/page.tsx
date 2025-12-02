@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// app/renter/requests/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -19,6 +18,7 @@ interface RequestBooking {
   endDate: string;
   totalPrice: number;
   status: string;
+  hasConflict?: boolean; // added by the API when another confirmed booking overlaps
 }
 
 export default function RenterRequestsPage() {
@@ -50,7 +50,10 @@ export default function RenterRequestsPage() {
     loadRequests();
   }, []);
 
-  async function handleAction(id: string, action: "confirm" | "cancel") {
+  async function handleAction(
+    id: string,
+    action: "confirm" | "cancel" | "spam"
+  ) {
     try {
       setActionLoadingId(id);
       setError(null);
@@ -66,8 +69,8 @@ export default function RenterRequestsPage() {
         throw new Error(data?.message || "Failed to update booking");
       }
 
-      // بعد النجاح، نشيل الطلب من القائمة (لأنه ما عاد pending)
-      setRequests((prev) => prev.filter((r) => r._id !== id));
+      // After success, reload the list so conflict flags are recalculated
+      await loadRequests();
     } catch (err: any) {
       console.error("Error updating booking", err);
       setError(err.message || "Failed to update booking");
@@ -130,21 +133,48 @@ export default function RenterRequestsPage() {
                   </td>
                   <td>${r.totalPrice}</td>
                   <td>
-                    <div className="d-flex gap-2">
-                      <button
-                        className="btn btn-sm btn-success"
-                        disabled={actionLoadingId === r._id}
-                        onClick={() => handleAction(r._id, "confirm")}
-                      >
-                        {actionLoadingId === r._id ? "Saving..." : "Accept"}
-                      </button>
-                      <button
-                        className="btn btn-sm btn-outline-danger"
-                        disabled={actionLoadingId === r._id}
-                        onClick={() => handleAction(r._id, "cancel")}
-                      >
-                        {actionLoadingId === r._id ? "Saving..." : "Reject"}
-                      </button>
+                    <div className="d-flex flex-wrap gap-2">
+                      {/* If this request conflicts with an already confirmed booking */}
+                      {r.hasConflict ? (
+                        <>
+                          {/* Accept is visibly disabled when there is a conflict */}
+                          <button
+                            className="btn btn-sm btn-success"
+                            disabled
+                            title="This room is already confirmed for these dates"
+                          >
+                            Accept
+                          </button>
+                          {/* Button to mark the request as conflict/spam (cancels with specific reason) */}
+                          <button
+                            className="btn btn-sm btn-warning"
+                            disabled={actionLoadingId === r._id}
+                            onClick={() => handleAction(r._id, "spam")}
+                          >
+                            {actionLoadingId === r._id
+                              ? "Saving..."
+                              : "Mark as conflict"}
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {/* Normal Accept / Reject buttons when no conflict */}
+                          <button
+                            className="btn btn-sm btn-success"
+                            disabled={actionLoadingId === r._id}
+                            onClick={() => handleAction(r._id, "confirm")}
+                          >
+                            {actionLoadingId === r._id ? "Saving..." : "Accept"}
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline-danger"
+                            disabled={actionLoadingId === r._id}
+                            onClick={() => handleAction(r._id, "cancel")}
+                          >
+                            {actionLoadingId === r._id ? "Saving..." : "Reject"}
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

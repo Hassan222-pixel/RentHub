@@ -1,28 +1,40 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @next/next/no-img-element */
 // app/room/RoomFilterList.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import type { DormListItem } from "./page";
 
-type Props = {
-  initialDorms: DormListItem[];
-};
-
+// Used when we check confirmed bookings for a dorm
 type BookingSummary = {
   startDate: string;
   endDate: string;
 };
+
+// Notification type returned from /api/bookings/me
+type ConflictNotification = {
+  id: string;
+  dormTitle: string;
+  startDate: string;
+  endDate: string;
+};
+
+type Props = {
+  initialDorms: DormListItem[];
+};
+
+const DISMISSED_KEY = "renthub_dismissed_conflict_notifications";
 
 export default function RoomFilterList({ initialDorms }: Props) {
   const [dorms, setDorms] = useState<DormListItem[]>(initialDorms);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters
+  // Filters state
   const [searchText, setSearchText] = useState("");
   const [roomType, setRoomType] = useState<
     "" | "private" | "double" | "shared"
@@ -33,14 +45,24 @@ export default function RoomFilterList({ initialDorms }: Props) {
   ]);
   const [startDate, endDate] = dateRange;
 
-  // Today for minDate
+  // Client notifications (conflict bookings)
+  const [notifications, setNotifications] = useState<ConflictNotification[]>(
+    []
+  );
+  const [dismissedNotificationIds, setDismissedNotificationIds] = useState<
+    string[]
+  >([]);
+
+  // "Today" with time removed (used as minDate in DatePicker)
   const today = (() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
   })();
 
-  // Helper: check if any confirmed booking overlaps (front-end logic)
+  // ----- Helpers -----
+
+  // Check if the requested [start, end] overlaps existing confirmed bookings
   function hasOverlap(
     requestedStart: Date,
     requestedEnd: Date,
@@ -57,18 +79,67 @@ export default function RoomFilterList({ initialDorms }: Props) {
         return false;
       }
 
-      // overlap: existingStart < requestedEnd && existingEnd > requestedStart
+      // Overlap if: existingStart < requestedEnd AND existingEnd > requestedStart
       return existingStart < requestedEnd && existingEnd > requestedStart;
     });
   }
 
-  // Search button handler
+  // Format date string nicely for the notification
+  function formatDate(value: string) {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleDateString();
+  }
+
+  // ----- Load dismissed notifications from localStorage once -----
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(DISMISSED_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setDismissedNotificationIds(parsed);
+        }
+      }
+    } catch (err) {
+      console.error(
+        "Failed to read dismissed notifications from localStorage",
+        err
+      );
+    }
+  }, []);
+
+  // ----- Load client conflict notifications once on mount -----
+  useEffect(() => {
+    const loadNotifications = async () => {
+      try {
+        const res = await fetch("/api/bookings/me", {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          // If user is not logged in as client, API returns notifications: []
+          return;
+        }
+
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+      } catch (err) {
+        console.error("Error loading client notifications:", err);
+      }
+    };
+
+    loadNotifications();
+  }, []);
+
+  // ----- Search / filter handler -----
   const handleSearch = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // 1) Call /api/dorms with q + roomType
+      // Build query params for /api/dorms
       const params = new URLSearchParams();
 
       if (searchText.trim()) {
@@ -82,9 +153,8 @@ export default function RoomFilterList({ initialDorms }: Props) {
       const queryString = params.toString();
       const url = queryString ? `/api/dorms?${queryString}` : "/api/dorms";
 
-      const res = await fetch(url, {
-        method: "GET",
-      });
+      // 1) Filter by text + room type via backend
+      const res = await fetch(url, { method: "GET" });
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
@@ -95,14 +165,13 @@ export default function RoomFilterList({ initialDorms }: Props) {
       const data = await res.json();
       let filteredDorms: DormListItem[] = data.dorms || [];
 
-      // 2) If the user selected a date range, filter by availability
+      // 2) If user picked a date range, filter rooms by availability (no overlap with confirmed bookings)
       if (startDate && endDate) {
         const start = startDate;
         const end = endDate;
 
         const availableDorms: DormListItem[] = [];
 
-        // For each dorm, check bookings from /api/bookings?dormId=xxx
         for (const dorm of filteredDorms) {
           try {
             const bookingsRes = await fetch(
@@ -111,7 +180,7 @@ export default function RoomFilterList({ initialDorms }: Props) {
             );
 
             if (!bookingsRes.ok) {
-              // If this fails, just consider it as no bookings blocking
+              // If bookings cannot be loaded, keep dorm visible as fallback
               availableDorms.push(dorm);
               continue;
             }
@@ -121,13 +190,12 @@ export default function RoomFilterList({ initialDorms }: Props) {
 
             const overlap = hasOverlap(start, end, bookings);
 
-            // If there is NO overlap, this dorm is available for that period
             if (!overlap) {
               availableDorms.push(dorm);
             }
           } catch (err) {
             console.error("Error checking bookings for dorm:", dorm._id, err);
-            // In case of error, we can still keep the dorm (or skip it).
+            // In case of error, keep dorm as available (fail-open)
             availableDorms.push(dorm);
           }
         }
@@ -144,7 +212,7 @@ export default function RoomFilterList({ initialDorms }: Props) {
     }
   };
 
-  // Clear button handler
+  // ----- Clear button handler -----
   const handleClear = () => {
     setSearchText("");
     setRoomType("");
@@ -153,8 +221,74 @@ export default function RoomFilterList({ initialDorms }: Props) {
     setDorms(initialDorms);
   };
 
+  // X button handler: dismiss one notification + store it in localStorage
+  const handleDismissNotification = (id: string) => {
+    setDismissedNotificationIds((prev) => {
+      const next = prev.includes(id) ? prev : [...prev, id];
+      try {
+        localStorage.setItem(DISMISSED_KEY, JSON.stringify(next));
+      } catch (err) {
+        console.error("Failed to save dismissed notifications", err);
+      }
+      return next;
+    });
+  };
+
+  // Only show notifications that were not dismissed with X
+  const visibleNotifications = notifications.filter(
+    (n) => !dismissedNotificationIds.includes(n.id)
+  );
+
   return (
     <>
+      {/* CLIENT NOTIFICATIONS: red banner with X button */}
+      {visibleNotifications.length > 0 && (
+        <div className="mb-3">
+          {visibleNotifications.map((n) => (
+            <div
+              key={n.id}
+              style={{
+                backgroundColor: "#ffdddd",
+                border: "1px solid #ff4d4f",
+                padding: "10px 14px",
+                borderRadius: "6px",
+                color: "#a10000",
+                fontWeight: 500,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "8px",
+              }}
+            >
+              <span>
+                Sorry, someone already booked <strong>{n.dormTitle}</strong> for
+                your requested dates ({formatDate(n.startDate)} –{" "}
+                {formatDate(n.endDate)}).
+              </span>
+
+              {/* X button to dismiss the message */}
+              <button
+                type="button"
+                onClick={() => handleDismissNotification(n.id)}
+                style={{
+                  marginLeft: "12px",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "18px",
+                  fontWeight: "bold",
+                  lineHeight: 1,
+                  color: "#a10000",
+                }}
+                aria-label="Close notification"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* FILTER BAR */}
       <div
         className="mb-4 p-3"
@@ -193,7 +327,7 @@ export default function RoomFilterList({ initialDorms }: Props) {
             />
           </div>
 
-          {/* Date range */}
+          {/* Date range picker */}
           <div
             className="d-flex align-items-center px-3 py-2"
             style={{
@@ -224,7 +358,7 @@ export default function RoomFilterList({ initialDorms }: Props) {
             />
           </div>
 
-          {/* Room type */}
+          {/* Room type select */}
           <div
             className="d-flex align-items-center px-3 py-2"
             style={{
@@ -279,7 +413,7 @@ export default function RoomFilterList({ initialDorms }: Props) {
         </div>
       </div>
 
-      {/* Error */}
+      {/* Error alert */}
       {error && (
         <div className="alert alert-danger" role="alert">
           {error}

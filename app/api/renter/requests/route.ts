@@ -1,4 +1,4 @@
-// app/api/renter/requests/route.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Booking } from "@/models/Booking";
@@ -19,16 +19,36 @@ export async function GET() {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const requests = await Booking.find({
+    // Load all pending requests for this renter
+    const requestDocs = await Booking.find({
       renter: user._id,
       status: "pending",
     })
       .populate("dorm", "title profileImg city")
       .populate("client", "name email")
-      .sort({ createdAt: -1 })
-      .lean();
+      .sort({ createdAt: -1 });
 
-    return NextResponse.json({ requests });
+    // For each pending request, check if there is already a confirmed booking
+    // for the same dorm and overlapping dates.
+    const requestsWithConflictFlag = await Promise.all(
+      requestDocs.map(async (doc) => {
+        const conflictExists = await Booking.exists({
+          _id: { $ne: doc._id },
+          dorm: doc.dorm, // Mongoose will use the dorm _id
+          status: "confirmed",
+          startDate: { $lt: doc.endDate },
+          endDate: { $gt: doc.startDate },
+        });
+
+        const obj = doc.toObject();
+        return {
+          ...obj,
+          hasConflict: !!conflictExists,
+        };
+      })
+    );
+
+    return NextResponse.json({ requests: requestsWithConflictFlag });
   } catch (err) {
     console.error("GET /api/renter/requests error:", err);
     return NextResponse.json(
@@ -50,7 +70,7 @@ export async function PATCH(req: Request) {
 
     const { bookingId, action } = await req.json();
 
-    if (!bookingId || !["confirm", "cancel"].includes(action)) {
+    if (!bookingId || !["confirm", "cancel", "spam"].includes(action)) {
       return NextResponse.json(
         { message: "bookingId and valid action are required" },
         { status: 400 }
@@ -77,9 +97,36 @@ export async function PATCH(req: Request) {
     }
 
     if (action === "confirm") {
+      // Before confirming, make sure there is no other confirmed booking
+      // for the same dorm and overlapping dates.
+      const overlappingConfirmed = await Booking.findOne({
+        _id: { $ne: booking._id },
+        dorm: booking.dorm,
+        status: "confirmed",
+        startDate: { $lt: booking.endDate },
+        endDate: { $gt: booking.startDate },
+      }).lean();
+
+      if (overlappingConfirmed) {
+        return NextResponse.json(
+          {
+            message:
+              "This room already has a confirmed booking that overlaps this period.",
+          },
+          { status: 409 }
+        );
+      }
+
       booking.status = "confirmed";
+      booking.cancelReason = undefined;
     } else if (action === "cancel") {
+      // Normal rejection
       booking.status = "cancelled";
+      booking.cancelReason = "renter_cancelled";
+    } else if (action === "spam") {
+      // Mark as conflict / spam for the client
+      booking.status = "cancelled";
+      booking.cancelReason = "conflict";
     }
 
     await booking.save();

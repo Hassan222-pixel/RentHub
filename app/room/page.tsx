@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @next/next/no-img-element */
+ 
 // app/room/page.tsx
 import TemplateHeader from "@/app/components/TemplateHeader";
 import TemplateFooter from "@/app/components/TemplateFooter";

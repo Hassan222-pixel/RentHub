@@ -1,5 +1,6 @@
-// app/room/request/[id]/page.tsx
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
@@ -150,7 +151,6 @@ export default function RoomRequestPage() {
       try {
         const res = await fetch(`/api/bookings?dormId=${id}`);
         if (!res.ok) {
-          // It is not critical for the form, so just log the error
           console.error("Failed to load existing bookings for calendar");
           return;
         }
@@ -233,6 +233,10 @@ export default function RoomRequestPage() {
   // 🔹 Submit booking request
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+
+    // ✅ Extra guard: if already submitting, ignore further clicks
+    if (submitting) return;
+
     setError(null);
     setSuccess(null);
 
@@ -277,12 +281,20 @@ export default function RoomRequestPage() {
       }
 
       setSuccess("Booking request sent successfully! ✅");
+
+      // ✅ After successful booking, redirect client to /room
+      router.push("/room");
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Something went wrong.");
-    } finally {
-      setSubmitting(false);
+      setSubmitting(false); // allow retry if there was an error
+      return;
     }
+
+    // Note: if we reached here (success + redirect),
+    // the component will unmount because of navigation,
+    // so we don't really need to reset submitting. But it's safe:
+    setSubmitting(false);
   }
 
   if (checkingAuth) {
@@ -366,7 +378,7 @@ export default function RoomRequestPage() {
                           setEndDate(null);
                         }
                       }}
-                      minDate={today} // Cannot select days before today
+                      minDate={today}
                       excludeDateIntervals={blockedIntervals}
                       selectsStart
                       startDate={startDate}
@@ -374,7 +386,6 @@ export default function RoomRequestPage() {
                       dateFormat="yyyy-MM-dd"
                       className="form-control"
                       placeholderText="Select start date"
-                      // Increase size visually
                       wrapperClassName="w-100"
                     />
                   </div>
@@ -386,7 +397,7 @@ export default function RoomRequestPage() {
                       id="endDate"
                       selected={endDate}
                       onChange={(date) => setEndDate(date)}
-                      minDate={startDate || today} // End date must be >= start date (or today)
+                      minDate={startDate || today}
                       excludeDateIntervals={blockedIntervals}
                       selectsEnd
                       startDate={startDate}
