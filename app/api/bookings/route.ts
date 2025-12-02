@@ -1,6 +1,6 @@
 // app/api/bookings/route.ts
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Booking } from "@/models/Booking";
 import { Dorm } from "@/models/Dorm";
@@ -11,18 +11,54 @@ type CurrentUser = {
   role: string; // "client" | "renter" | "super-admin" | ...
 };
 
-export async function POST(req: Request) {
+// GET /api/bookings?dormId=XXXX
+// This is used by the client booking page to know which dates are already booked.
+export async function GET(req: NextRequest) {
+  try {
+    await connectToDatabase();
+
+    const { searchParams } = new URL(req.url);
+    const dormId = searchParams.get("dormId");
+
+    if (!dormId) {
+      return NextResponse.json(
+        { message: "dormId query parameter is required" },
+        { status: 400 }
+      );
+    }
+
+    // Only confirmed bookings should block the calendar
+    const bookings = await Booking.find({
+      dorm: dormId,
+      status: "confirmed",
+    })
+      .select("startDate endDate")
+      .lean();
+
+    return NextResponse.json({ bookings });
+  } catch (err) {
+    console.error("GET /api/bookings error:", err);
+    return NextResponse.json(
+      { message: "Failed to load bookings" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/bookings
+// Create a new booking request (status: "pending")
+export async function POST(req: NextRequest) {
   try {
     await connectToDatabase();
 
     const user = (await getCurrentUserFromApi()) as (CurrentUser & any) | null;
 
-    // 🔐 لازم يكون عامل login
+    // User must be logged in
     if (!user) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // 🔐 لازم يكون role = "client"
+    // Only client can create bookings
     if (user.role !== "client") {
       return NextResponse.json(
         { message: "Only clients can create bookings" },
@@ -54,7 +90,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🏠 جيب الـ Dorm عشان نعرف صاحب البيت والأسعار
+    // Get dorm info (owner + prices)
     const dormDoc = await Dorm.findById(dormId).lean();
 
     if (!dormDoc || (dormDoc as any).isActive === false) {
@@ -63,8 +99,7 @@ export async function POST(req: Request) {
 
     const dorm: any = dormDoc;
 
-    // ⛔ CHECK AVAILABILITY:
-    // هل يوجد booking "confirmed" لنفس الغرفة بنفس الفترة (تداخل بين الفترات)؟
+    // Check if there is any confirmed booking overlapping this date range
     const overlapping = await Booking.findOne({
       dorm: dormId,
       status: "confirmed",
@@ -79,7 +114,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🧮 حساب عدد الأيام
+    // Compute duration in days
     const msPerDay = 1000 * 60 * 60 * 24;
     const diffMs = end.getTime() - start.getTime();
     const days = Math.ceil(diffMs / msPerDay);
@@ -91,7 +126,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🧮 حساب السعر (لوجيك بسيط كبداية: شهري > أسبوعي > يومي)
+    // Simple pricing logic
     let totalPrice = 0;
 
     if (dorm.pricePerMonth && days >= 28) {
@@ -109,11 +144,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // 📝 إنشاء Booking جديد بحالة pending (request)
+    // Create booking with status "pending" (request)
     const booking = await Booking.create({
       dorm: dormId,
-      renter: dorm.owner, // صاحب البيت من الـ Dorm
-      client: user._id, // الـ client الحالي (student)
+      renter: dorm.owner,
+      client: user._id,
       startDate: start,
       endDate: end,
       totalPrice,

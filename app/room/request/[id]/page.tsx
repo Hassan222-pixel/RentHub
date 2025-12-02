@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/room/request/[id]/page.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
@@ -7,6 +7,8 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import TemplateHeader from "@/app/components/TemplateHeader";
 import TemplateFooter from "@/app/components/TemplateFooter";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 type DormType = {
   _id: string;
@@ -15,6 +17,16 @@ type DormType = {
   pricePerWeek?: number;
   pricePerMonth?: number;
   depositCurrency?: string;
+};
+
+type ApiBooking = {
+  startDate: string;
+  endDate: string;
+};
+
+type DateInterval = {
+  start: Date;
+  end: Date;
 };
 
 export default function RoomRequestPage() {
@@ -27,8 +39,9 @@ export default function RoomRequestPage() {
   const [dorm, setDorm] = useState<DormType | null>(null);
   const [loadingDorm, setLoadingDorm] = useState(true);
 
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+  // Booking form state
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const [days, setDays] = useState<number>(0);
   const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
 
@@ -38,15 +51,28 @@ export default function RoomRequestPage() {
 
   const [checkingAuth, setCheckingAuth] = useState(true);
 
+  // Existing confirmed bookings for this dorm (for disabling dates)
+  const [blockedIntervals, setBlockedIntervals] = useState<DateInterval[]>([]);
+
   const currency = dorm?.depositCurrency || "USD";
 
-  // 🔐 Check auth: لازم يكون role = client
+  // Helper: get "today" with time removed (start of day)
+  const today = (() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  })();
+
+  // 🔐 Check auth: user must be client
   useEffect(() => {
     let cancelled = false;
 
     async function checkAuth() {
       try {
-        const res = await fetch("/api/auth/me");
+        const res = await fetch("/api/auth/me", {
+          method: "GET",
+          credentials: "include",
+        });
         if (!res.ok) {
           throw new Error("Not logged in");
         }
@@ -77,7 +103,7 @@ export default function RoomRequestPage() {
     };
   }, [id, router]);
 
-  // 🔹 جلب معلومات الـ Dorm
+  // 🔹 Load dorm info
   useEffect(() => {
     if (!id) return;
 
@@ -115,7 +141,50 @@ export default function RoomRequestPage() {
     };
   }, [id]);
 
-  // 🔹 حساب الأيام والسعر التقريبي
+  // 🔹 Load confirmed bookings for this dorm to disable those dates
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+
+    async function loadBlockedDates() {
+      try {
+        const res = await fetch(`/api/bookings?dormId=${id}`);
+        if (!res.ok) {
+          // It is not critical for the form, so just log the error
+          console.error("Failed to load existing bookings for calendar");
+          return;
+        }
+
+        const data = await res.json();
+        const bookings: ApiBooking[] = data.bookings || [];
+
+        if (cancelled) return;
+
+        const intervals: DateInterval[] = bookings.map((b) => {
+          const start = new Date(b.startDate);
+          const end = new Date(b.endDate);
+
+          // Normalize to start/end of day to make the interval clean
+          start.setHours(0, 0, 0, 0);
+          end.setHours(23, 59, 59, 999);
+
+          return { start, end };
+        });
+
+        setBlockedIntervals(intervals);
+      } catch (err) {
+        console.error("Error loading blocked dates:", err);
+      }
+    }
+
+    loadBlockedDates();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  // 🔹 Compute days and estimated price whenever dates or dorm change
   useEffect(() => {
     if (!startDate || !endDate) {
       setDays(0);
@@ -145,6 +214,7 @@ export default function RoomRequestPage() {
 
     let total = 0;
 
+    // Simple pricing logic: monthly > weekly > daily
     if (dorm.pricePerMonth && d >= 28) {
       const months = Math.ceil(d / 30);
       total = months * dorm.pricePerMonth;
@@ -160,7 +230,7 @@ export default function RoomRequestPage() {
     setEstimatedPrice(total);
   }, [startDate, endDate, dorm]);
 
-  // 🔹 إرسال الطلب
+  // 🔹 Submit booking request
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
@@ -176,6 +246,17 @@ export default function RoomRequestPage() {
       return;
     }
 
+    // Prevent selecting a start date in the past
+    if (startDate < today) {
+      setError("Start date cannot be in the past.");
+      return;
+    }
+
+    if (endDate <= startDate) {
+      setError("End date must be after start date.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -184,8 +265,8 @@ export default function RoomRequestPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           dormId: id,
-          startDate,
-          endDate,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
         }),
       });
 
@@ -272,25 +353,48 @@ export default function RoomRequestPage() {
             <div className="row mt-3">
               <div className="col-md-8">
                 <form onSubmit={handleSubmit}>
+                  {/* Start date picker */}
                   <div className="form-group mb-3">
                     <label htmlFor="startDate">Start Date</label>
-                    <input
+                    <DatePicker
                       id="startDate"
-                      type="date"
+                      selected={startDate}
+                      onChange={(date) => {
+                        setStartDate(date);
+                        // Reset end date if it is before the new start date
+                        if (date && endDate && endDate <= date) {
+                          setEndDate(null);
+                        }
+                      }}
+                      minDate={today} // Cannot select days before today
+                      excludeDateIntervals={blockedIntervals}
+                      selectsStart
+                      startDate={startDate}
+                      endDate={endDate}
+                      dateFormat="yyyy-MM-dd"
                       className="form-control"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
+                      placeholderText="Select start date"
+                      // Increase size visually
+                      wrapperClassName="w-100"
                     />
                   </div>
 
+                  {/* End date picker */}
                   <div className="form-group mb-3">
                     <label htmlFor="endDate">End Date</label>
-                    <input
+                    <DatePicker
                       id="endDate"
-                      type="date"
+                      selected={endDate}
+                      onChange={(date) => setEndDate(date)}
+                      minDate={startDate || today} // End date must be >= start date (or today)
+                      excludeDateIntervals={blockedIntervals}
+                      selectsEnd
+                      startDate={startDate}
+                      endDate={endDate}
+                      dateFormat="yyyy-MM-dd"
                       className="form-control"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
+                      placeholderText="Select end date"
+                      wrapperClassName="w-100"
                     />
                   </div>
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/renter/bookings/route.ts
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
@@ -19,14 +20,20 @@ export async function GET() {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const bookings = await Booking.find({
+    const bookingsRaw = await Booking.find({
       renter: user._id,
-      status: "confirmed", // 👈 فقط الحجوزات المقبولة
+      status: "confirmed",
     })
       .populate("dorm")
       .populate("client", "name email")
       .sort({ startDate: 1 })
       .lean();
+
+    // Convert _id (ObjectId) to string
+    const bookings = bookingsRaw.map((b: any) => ({
+      ...b,
+      _id: b._id.toString(),
+    }));
 
     return NextResponse.json({ bookings });
   } catch (err) {
