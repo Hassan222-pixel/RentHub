@@ -1,61 +1,74 @@
 "use client";
 
-import TemplateHeader from "@/app/components/TemplateHeader";
-import TemplateFooter from "@/app/components/TemplateFooter";
+import { useEffect, useState } from "react";
+
+interface BlogItem {
+  id: number;
+  image: string;
+  title: string;
+  subtitle: string;
+  description: string;
+}
 
 export default function BlogPage() {
-  return (
-    <div className="main-layout">
-      <TemplateHeader />
+  const [blogs, setBlogs] = useState<BlogItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-      {/* PAGE TITLE */}
-      <div className="back_re">
-        <div className="container">
-          <div className="row">
-            <div className="col-md-12">
-              <div className="title">
-                <h2>Blog</h2>
-              </div>
-            </div>
-          </div>
-        </div>
+  useEffect(() => {
+    fetch("/api/blog")
+      .then((res) => res.json())
+      .then((data) => {
+        setBlogs(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="blog-section text-center p-5">
+        <h2>Loading blog...</h2>
       </div>
+    );
+  }
 
-      {/* BLOG SECTION */}
-      <div className="blog">
-        <div className="container">
+  if (!blogs.length) {
+    return (
+      <div className="blog-section text-center p-5">
+        <h3>No blog posts available.</h3>
+        <p>Ask admin to add some blog posts in Dashboard → Blog Manager.</p>
+      </div>
+    );
+  }
 
-          <div className="row">
-            {[1, 2, 3].map((num) => (
-              <div key={num} className="col-md-4">
-                <div className="blog_box">
-                  <div className="blog_img">
-                    <figure>
-                      <img
-                        src={`/template/images/blog${num}.jpg`}
-                        alt={`Blog ${num}`}
-                      />
-                    </figure>
-                  </div>
+  return (
+    <div className="blog-section">
+      <h1 className="text-center font-bold text-4xl mt-10">BLOG</h1>
+      <p className="text-center mt-2">
+        Lorem Ipsum available, but the majority have suffered
+      </p>
 
-                  <div className="blog_room">
-                    <h3>Bed Room</h3>
-                    <span>The standard chunk</span>
-                    <p>
-                      If you are going to use a passage of Lorem Ipsum, you need
-                      to be sure there isn't anything embarrassing hidden in the
-                      middle of text.
-                    </p>
-                  </div>
+      <div className="container mt-5">
+        <div className="row">
+          {blogs.map((item) => (
+            <div key={item.id} className="col-md-4 mb-4">
+              <div className="card">
+                <img
+                  src={item.image}
+                  className="card-img-top"
+                  style={{ height: "260px", objectFit: "cover" }}
+                  alt="Blog Image"
+                />
+                <div className="card-body">
+                  <h4>{item.title}</h4>
+                  <h6 className="text-danger">{item.subtitle}</h6>
+                  <p>{item.description}</p>
                 </div>
               </div>
-            ))}
-          </div>
-
+            </div>
+          ))}
         </div>
       </div>
-
-      <TemplateFooter />
     </div>
   );
 }

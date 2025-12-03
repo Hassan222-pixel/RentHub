@@ -27,13 +27,17 @@ export default function LoginPage() {
 
 const data = await res.json();
 
-if (data.user.role === "admin") {
-  router.push("/dashboard");
-} else if (data.user.role === "renter") {
-  router.push("/renter");
-} else {
-  setError("Unknown user role");
-}
+if (data.user.role === "super-admin") {
+      router.push("/dashboard");
+    } else if (data.user.role === "renter") {
+      router.push("/renter");
+    } else if (data.user.role === "managers-admin") {
+      router.push("/dashboard/managers");
+    } else if (data.user.role === "accounts-admin") {
+      router.push("/dashboard/accounts");
+    } else {
+      setError("Unknown user role");
+    }
 
   };
 

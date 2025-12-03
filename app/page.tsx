@@ -1,16 +1,91 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import TemplateHeader from "@/app/components/TemplateHeader";
 import TemplateFooter from "@/app/components/TemplateFooter";
 
+/* ---------------- HERO TYPES ---------------- */
+type HeroContent = {
+  title: string;
+  subtitle?: string;
+  backgroundImage: string;
+  buttonText?: string;
+};
+
+const defaultHero: HeroContent = {
+  title: "Book a Room Online",
+  subtitle:
+    "The passage experienced a surge in popularity when desktop publishers bundled it with their software.",
+  backgroundImage: "/template/images/banner1.jpg",
+  buttonText: "Book Now",
+};
+
+/* ---------------- ABOUT TYPES ---------------- */
+type AboutData = {
+  title: string;
+  content: string;
+  imageUrl: string;
+  buttonText: string;
+};
+
+const defaultAbout: AboutData = {
+  title: "About Us",
+  content:
+    "The passage experienced a surge in popularity during the 1960s when Letraset used it on their dry-transfer sheets, and again during the 90s as desktop publishers bundled the text with their software.",
+  imageUrl: "/template/images/about.png",
+  buttonText: "Read More",
+};
+
 export default function HomePage() {
+  const [hero, setHero] = useState<HeroContent>(defaultHero);
+  const [about, setAbout] = useState<AboutData>(defaultAbout);
+
+  /* ---------------- LOAD HERO ---------------- */
+  useEffect(() => {
+    const fetchHero = async () => {
+      try {
+        const res = await fetch("/api/hero");
+        if (!res.ok) return;
+        const data = await res.json();
+        setHero((prev) => ({ ...prev, ...data }));
+      } catch (err) {
+        console.error("Failed to load hero content:", err);
+      }
+    };
+
+    fetchHero();
+  }, []);
+
+  /* ---------------- LOAD ABOUT ---------------- */
+  useEffect(() => {
+    const fetchAbout = async () => {
+      try {
+        const res = await fetch("/api/about");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data) return;
+
+        setAbout({
+          title: data.title || defaultAbout.title,
+          content: data.content || defaultAbout.content,
+          imageUrl: data.imageUrl || defaultAbout.imageUrl,
+          buttonText: data.buttonText || defaultAbout.buttonText,
+        });
+      } catch (err) {
+        console.error("Failed to load about:", err);
+      }
+    };
+
+    fetchAbout();
+  }, []);
+
   return (
     <div className="main-layout">
 
       {/* ================= HEADER ================= */}
       <TemplateHeader />
 
-      {/* ================= BANNER / HERO SECTION ================= */}
+      {/* ================= HERO ================= */}
       <section className="banner_main">
         <div id="myCarousel" className="carousel slide banner">
           <ol className="carousel-indicators">
@@ -21,13 +96,25 @@ export default function HomePage() {
 
           <div className="carousel-inner">
             <div className="carousel-item active">
-              <img className="first-slide" src="/template/images/banner1.jpg" alt="Banner 1" />
+              <img
+                className="first-slide"
+                src={hero.backgroundImage || "/template/images/banner1.jpg"}
+                alt="Banner 1"
+              />
             </div>
             <div className="carousel-item">
-              <img className="second-slide" src="/template/images/banner2.jpg" alt="Banner 2" />
+              <img
+                className="second-slide"
+                src="/template/images/banner2.jpg"
+                alt="Banner 2"
+              />
             </div>
             <div className="carousel-item">
-              <img className="third-slide" src="/template/images/banner3.jpg" alt="Banner 3" />
+              <img
+                className="third-slide"
+                src="/template/images/banner3.jpg"
+                alt="Banner 3"
+              />
             </div>
           </div>
         </div>
@@ -36,8 +123,9 @@ export default function HomePage() {
           <div className="container">
             <div className="row">
               <div className="col-md-5">
+
                 <div className="book_room">
-                  <h1>Book a Room Online</h1>
+                  <h1>{hero.title}</h1>
 
                   <form className="book_now">
                     <div className="row">
@@ -54,39 +142,40 @@ export default function HomePage() {
                       </div>
 
                       <div className="col-md-12">
-                        <button type="button" className="book_btn">Book Now</button>
+                        <button type="button" className="book_btn">
+                          {hero.subtitle || "Book Now"}
+                        </button>
                       </div>
                     </div>
                   </form>
-
                 </div>
+
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ================= ABOUT SECTION ================= */}
+      {/* ================= ABOUT (DYNAMIC) ================= */}
       <div className="about">
         <div className="container-fluid">
           <div className="row">
 
             <div className="col-md-5">
               <div className="titlepage">
-                <h2>About Us</h2>
-                <p>
-                  The passage experienced a surge in popularity during the 1960s when Letraset used it
-                  on their dry-transfer sheets, and again during the 90s as desktop publishers bundled
-                  the text with their software.
-                </p>
-                <a className="read_more" href="/about">Read More</a>
+                <h2>{about.title}</h2>
+                <p>{about.content}</p>
+                <a className="read_more" href="/about">{about.buttonText}</a>
               </div>
             </div>
 
             <div className="col-md-7">
               <div className="about_img">
                 <figure>
-                  <img src="/template/images/about.png" alt="About" />
+                  <img
+                    src={about.imageUrl || "/template/images/about.png"}
+                    alt="About"
+                  />
                 </figure>
               </div>
             </div>
@@ -113,7 +202,10 @@ export default function HomePage() {
                 <div id="serv_hover" className="room">
                   <div className="room_img">
                     <figure>
-                      <img src={`/template/images/room${num}.jpg`} alt={`Room ${num}`} />
+                      <img
+                        src={`/template/images/room${num}.jpg`}
+                        alt={`Room ${num}`}
+                      />
                     </figure>
                   </div>
                   <div className="bed_room">
@@ -128,7 +220,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ================= GALLERY SECTION ================= */}
+      {/* ================= GALLERY ================= */}
       <div className="gallery">
         <div className="container">
           <div className="row">
@@ -150,11 +242,10 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-
         </div>
       </div>
 
-      {/* ================= BLOG SECTION ================= */}
+      {/* ================= BLOG ================= */}
       <div className="blog">
         <div className="container">
           <div className="row">
@@ -179,8 +270,8 @@ export default function HomePage() {
                     <h3>Bed Room</h3>
                     <span>The standard chunk</span>
                     <p>
-                      If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything
-                      embarrassing hidden in the middle of text.
+                      If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't
+                      anything embarrassing hidden in the middle of text.
                     </p>
                   </div>
                 </div>
@@ -191,9 +282,10 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ================= CONTACT SECTION ================= */}
+      {/* ================= CONTACT ================= */}
       <div className="contact">
         <div className="container">
+
           <div className="row">
             <div className="col-md-12">
               <div className="titlepage">
@@ -207,26 +299,15 @@ export default function HomePage() {
             <div className="col-md-6">
               <form className="main_form">
                 <div className="row">
-                  <div className="col-md-12">
-                    <input className="contactus" placeholder="Name" type="text" />
-                  </div>
-                  <div className="col-md-12">
-                    <input className="contactus" placeholder="Email" type="email" />
-                  </div>
-                  <div className="col-md-12">
-                    <input className="contactus" placeholder="Phone Number" type="text" />
-                  </div>
-                  <div className="col-md-12">
-                    <textarea className="textarea" placeholder="Message" defaultValue={""}></textarea>
-                  </div>
-                  <div className="col-md-12">
-                    <button className="send_btn" type="button">Send</button>
-                  </div>
+                  <div className="col-md-12"><input className="contactus" placeholder="Name" type="text" /></div>
+                  <div className="col-md-12"><input className="contactus" placeholder="Email" type="email" /></div>
+                  <div className="col-md-12"><input className="contactus" placeholder="Phone Number" type="text" /></div>
+                  <div className="col-md-12"><textarea className="textarea" placeholder="Message"></textarea></div>
+                  <div className="col-md-12"><button className="send_btn" type="button">Send</button></div>
                 </div>
               </form>
             </div>
 
-            {/* Map */}
             <div className="col-md-6">
               <div className="map_main">
                 <div className="map-responsive">
@@ -243,6 +324,7 @@ export default function HomePage() {
             </div>
 
           </div>
+
         </div>
       </div>
 

@@ -1,61 +1,90 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function BlogManagerPage() {
-  const [posts, setPosts] = useState([{ title: "", text: "", image: "" }]);
+  const [blogs, setBlogs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const addPost = () => {
-    setPosts([...posts, { title: "", text: "", image: "" }]);
+  useEffect(() => {
+    fetch("/api/blog")
+      .then((res) => res.json())
+      .then((data) => {
+        setBlogs(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const updateBlog = (index: number, field: string, value: string) => {
+    const updated = [...blogs];
+    updated[index][field] = value;
+    setBlogs(updated);
   };
 
-  const updatePost = (index: number, field: string, value: string) => {
-    const newPosts = [...posts];
-    (newPosts[index] as any)[field] = value;
-    setPosts(newPosts);
+  const handleSave = async () => {
+    await fetch("/api/blog", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(blogs),
+    });
+
+    alert("Blog saved successfully!");
   };
 
-  const handleSave = () => {
-    alert("Blog Saved (DB later)");
-  };
+  if (loading) return <p className="p-4">Loading...</p>;
+
+  if (!blogs.length)
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-4">Blog Manager</h1>
+        <p>No blogs found. Check your Blog.ts file.</p>
+      </div>
+    );
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Blog Manager</h1>
 
-      {posts.map((post, i) => (
-        <div key={i} className="border p-3 mb-4 rounded">
+      {blogs.map((item: any, index: number) => (
+        <div key={item.id} className="card p-4 mb-4 shadow-sm">
+          <h3 className="font-bold mb-3">Blog #{item.id}</h3>
 
-          <label className="fw-semibold">Post #{i + 1} Title</label>
+          <label>Image URL</label>
           <input
             className="form-control mb-2"
-            value={post.title}
-            onChange={(e) => updatePost(i, "title", e.target.value)}
+            value={item.image}
+            onChange={(e) => updateBlog(index, "image", e.target.value)}
           />
 
-          <label className="fw-semibold">Post Text</label>
+          <label>Title</label>
+          <input
+            className="form-control mb-2"
+            value={item.title}
+            onChange={(e) => updateBlog(index, "title", e.target.value)}
+          />
+
+          <label>Subtitle</label>
+          <input
+            className="form-control mb-2"
+            value={item.subtitle}
+            onChange={(e) => updateBlog(index, "subtitle", e.target.value)}
+          />
+
+          <label>Description</label>
           <textarea
             className="form-control mb-2"
-            rows={4}
-            value={post.text}
-            onChange={(e) => updatePost(i, "text", e.target.value)}
-          ></textarea>
-
-          <label className="fw-semibold">Image URL</label>
-          <input
-            className="form-control"
-            value={post.image}
-            onChange={(e) => updatePost(i, "image", e.target.value)}
+            rows={3}
+            value={item.description}
+            onChange={(e) =>
+              updateBlog(index, "description", e.target.value)
+            }
           />
         </div>
       ))}
 
-      <button className="btn btn-secondary me-3" onClick={addPost}>
-        + Add New Blog Post
-      </button>
-
-      <button className="btn btn-primary" onClick={handleSave}>
-        Save Blog
+      <button onClick={handleSave} className="btn btn-primary mt-3">
+        Save All Changes
       </button>
     </div>
   );
