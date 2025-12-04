@@ -26,24 +26,29 @@ interface Dorm {
   genderPreference?: GenderPreference;
   allowsSmoking?: boolean;
   allowsPets?: boolean;
-  houseRules?: string;
+  houseRules?: string[];
 
   // PRICING
   pricePerNight?: number;
-  pricePerWeek?: number;
   pricePerMonth?: number;
 
   // AVAILABILITY
-  availableFrom?: string;
   minStayNights?: number;
 
   // DEPOSIT
   depositAmount?: number;
-  depositCurrency?: string;
 
   // LOCATION
   latitude?: number;
   longitude?: number;
+
+  // BOOLEAN AMENITIES
+  hasWifi?: boolean;
+  hasAirConditioning?: boolean;
+  hasHeating?: boolean;
+  hasParking?: boolean;
+  hasLaundry?: boolean;
+  isFurnished?: boolean;
 
   // EXTRAS
   amenities?: string[];
@@ -90,24 +95,33 @@ export default function EditListingPage() {
 
   // ROOM
   const [roomType, setRoomType] = useState<RoomType>("");
+  const [maxOccupantsInput, setMaxOccupantsInput] = useState("");
   const [genderPreference, setGenderPreference] =
     useState<GenderPreference>("any");
   const [allowsSmoking, setAllowsSmoking] = useState(false);
   const [allowsPets, setAllowsPets] = useState(false);
-  const [houseRules, setHouseRules] = useState("");
+
+  // HOUSE RULES
+  const [houseRuleInput, setHouseRuleInput] = useState("");
+  const [houseRules, setHouseRules] = useState<string[]>([]);
 
   // PRICING
   const [pricePerNight, setPricePerNight] = useState("");
-  const [pricePerWeek, setPricePerWeek] = useState("");
   const [pricePerMonth, setPricePerMonth] = useState("");
 
   // AVAILABILITY
-  const [availableFrom, setAvailableFrom] = useState("");
   const [minStayNights, setMinStayNights] = useState("");
 
   // DEPOSIT
   const [depositAmount, setDepositAmount] = useState("");
-  const [depositCurrency, setDepositCurrency] = useState("USD");
+
+  // BOOLEAN AMENITIES
+  const [hasWifi, setHasWifi] = useState(false);
+  const [hasAirConditioning, setHasAirConditioning] = useState(false);
+  const [hasHeating, setHasHeating] = useState(false);
+  const [hasParking, setHasParking] = useState(false);
+  const [hasLaundry, setHasLaundry] = useState(false);
+  const [isFurnished, setIsFurnished] = useState(false);
 
   // EXTRAS
   const [amenities, setAmenities] = useState("");
@@ -230,6 +244,23 @@ export default function EditListingPage() {
   };
 
   // =========================
+  // HOUSE RULES HELPERS
+  // =========================
+
+  const addHouseRule = () => {
+    const value = houseRuleInput.trim();
+    if (!value) return;
+    setHouseRules((prev) =>
+      prev.includes(value) ? prev : [...prev, value]
+    );
+    setHouseRuleInput("");
+  };
+
+  const removeHouseRule = (rule: string) => {
+    setHouseRules((prev) => prev.filter((r) => r !== rule));
+  };
+
+  // =========================
   // LOAD UNIVERSITIES FOR DROPDOWN
   // =========================
   useEffect(() => {
@@ -292,29 +323,25 @@ export default function EditListingPage() {
 
         // ROOM
         setRoomType((dorm.roomType as RoomType) || "");
+        setMaxOccupantsInput(
+          dorm.maxOccupants !== undefined ? String(dorm.maxOccupants) : ""
+        );
         setGenderPreference(
           (dorm.genderPreference as GenderPreference) || "any"
         );
         setAllowsSmoking(dorm.allowsSmoking ?? false);
         setAllowsPets(dorm.allowsPets ?? false);
-        setHouseRules(dorm.houseRules || "");
+        setHouseRules(dorm.houseRules || []);
 
         // PRICING
         setPricePerNight(
           dorm.pricePerNight !== undefined ? String(dorm.pricePerNight) : ""
-        );
-        setPricePerWeek(
-          dorm.pricePerWeek !== undefined ? String(dorm.pricePerWeek) : ""
         );
         setPricePerMonth(
           dorm.pricePerMonth !== undefined ? String(dorm.pricePerMonth) : ""
         );
 
         // AVAILABILITY
-        if (dorm.availableFrom) {
-          const d = new Date(dorm.availableFrom);
-          setAvailableFrom(d.toISOString().slice(0, 10));
-        }
         setMinStayNights(
           dorm.minStayNights !== undefined ? String(dorm.minStayNights) : ""
         );
@@ -323,7 +350,14 @@ export default function EditListingPage() {
         setDepositAmount(
           dorm.depositAmount !== undefined ? String(dorm.depositAmount) : ""
         );
-        setDepositCurrency(dorm.depositCurrency || "USD");
+
+        // BOOLEAN AMENITIES
+        setHasWifi(dorm.hasWifi ?? false);
+        setHasAirConditioning(dorm.hasAirConditioning ?? false);
+        setHasHeating(dorm.hasHeating ?? false);
+        setHasParking(dorm.hasParking ?? false);
+        setHasLaundry(dorm.hasLaundry ?? false);
+        setIsFurnished(dorm.isFurnished ?? false);
 
         // AMENITIES / MEDIA
         setAmenities(dorm.amenities?.join(", ") || "");
@@ -502,14 +536,6 @@ export default function EditListingPage() {
     setAddress(feature.text);
   };
 
-  // helper to keep same logic as "new" page
-  const getMaxOccupantsFromRoomType = (type: RoomType): number | null => {
-    if (type === "private") return 1;
-    if (type === "double") return 2;
-    if (type === "shared") return 3; // or 4
-    return null;
-  };
-
   // =========================
   // SUBMIT
   // =========================
@@ -524,15 +550,33 @@ export default function EditListingPage() {
       return;
     }
 
-    if (!pricePerNight && !pricePerWeek && !pricePerMonth) {
-      setError("Please provide at least one price (night/week/month)");
+    if (!pricePerNight && !pricePerMonth) {
+      setError("Please provide at least one price (night or month)");
       setSaving(false);
       return;
     }
 
-    try {
-      const maxOccupants = getMaxOccupantsFromRoomType(roomType);
+    let maxOccupants: number | null = null;
+    if (roomType === "private") {
+      maxOccupants = 1;
+    } else if (roomType === "double") {
+      maxOccupants = 2;
+    } else if (roomType === "shared") {
+      if (!maxOccupantsInput) {
+        setError("Please set max occupants for shared rooms");
+        setSaving(false);
+        return;
+      }
+      const parsed = Number(maxOccupantsInput);
+      if (!Number.isFinite(parsed) || parsed < 1) {
+        setError("Max occupants for shared rooms must be at least 1");
+        setSaving(false);
+        return;
+      }
+      maxOccupants = parsed;
+    }
 
+    try {
       const res = await fetch(`/api/renter/listings/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -547,19 +591,25 @@ export default function EditListingPage() {
           maxOccupants,
 
           pricePerNight: pricePerNight !== "" ? Number(pricePerNight) : null,
-          pricePerWeek: pricePerWeek !== "" ? Number(pricePerWeek) : null,
           pricePerMonth: pricePerMonth !== "" ? Number(pricePerMonth) : null,
 
-          availableFrom: availableFrom || null,
-          minStayNights: minStayNights !== "" ? Number(minStayNights) : null,
+          minStayNights:
+            minStayNights !== "" ? Number(minStayNights) : null,
 
-          depositAmount: depositAmount !== "" ? Number(depositAmount) : null,
-          depositCurrency,
+          depositAmount:
+            depositAmount !== "" ? Number(depositAmount) : null,
 
           genderPreference,
           allowsSmoking,
           allowsPets,
           houseRules,
+
+          hasWifi,
+          hasAirConditioning,
+          hasHeating,
+          hasParking,
+          hasLaundry,
+          isFurnished,
 
           latitude,
           longitude,
@@ -748,6 +798,37 @@ export default function EditListingPage() {
             </select>
           </div>
 
+          {/* Max occupants (shared only) */}
+          {roomType === "shared" && (
+            <div className="mb-3 col-md-4">
+              <label className="form-label">Max Occupants</label>
+              <input
+                type="number"
+                className="form-control"
+                value={maxOccupantsInput}
+                onChange={(e) => setMaxOccupantsInput(e.target.value)}
+                min={1}
+                placeholder="Number of beds / people"
+              />
+            </div>
+          )}
+
+          {roomType === "private" && (
+            <div className="mb-3 col-md-4 d-flex align-items-end">
+              <small className="text-muted">
+                Max occupants will be <strong>1</strong>.
+              </small>
+            </div>
+          )}
+
+          {roomType === "double" && (
+            <div className="mb-3 col-md-4 d-flex align-items-end">
+              <small className="text-muted">
+                Max occupants will be <strong>2</strong>.
+              </small>
+            </div>
+          )}
+
           <div className="mb-3 col-md-4">
             <label className="form-label">Gender Preference</label>
             <select
@@ -762,8 +843,11 @@ export default function EditListingPage() {
               <option value="female">Female only</option>
             </select>
           </div>
+        </div>
 
-          <div className="mb-3 col-md-4 d-flex align-items-center">
+        {/* RULES TOGGLES */}
+        <div className="row">
+          <div className="mb-3 col-md-6 d-flex align-items-center">
             <div className="d-flex flex-column gap-2 mt-3 mt-md-0">
               <div className="form-check">
                 <input
@@ -795,19 +879,52 @@ export default function EditListingPage() {
 
         {/* HOUSE RULES */}
         <div className="mb-3">
-          <label className="form-label">Other Rules / Notes</label>
-          <textarea
-            className="form-control"
-            rows={3}
-            placeholder="e.g. No loud music after 11pm, no visitors after midnight..."
-            value={houseRules}
-            onChange={(e) => setHouseRules(e.target.value)}
-          />
+          <label className="form-label">House Rules</label>
+          <div className="input-group mb-2">
+            <input
+              className="form-control"
+              placeholder="e.g. No visitors after midnight"
+              value={houseRuleInput}
+              onChange={(e) => setHouseRuleInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addHouseRule();
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="btn btn-outline-secondary"
+              onClick={addHouseRule}
+            >
+              Add
+            </button>
+          </div>
+          {houseRules.length > 0 && (
+            <div className="d-flex flex-wrap gap-2">
+              {houseRules.map((rule) => (
+                <span
+                  key={rule}
+                  className="badge bg-light text-dark d-flex align-items-center gap-2"
+                  style={{ border: "1px solid #dee2e6" }}
+                >
+                  {rule}
+                  <button
+                    type="button"
+                    className="btn-close btn-close-sm"
+                    aria-label="Remove"
+                    onClick={() => removeHouseRule(rule)}
+                  />
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* PRICING */}
         <div className="row">
-          <div className="mb-3 col-md-4">
+          <div className="mb-3 col-md-6">
             <label className="form-label">Price per Night</label>
             <input
               type="number"
@@ -820,20 +937,7 @@ export default function EditListingPage() {
               min={0}
             />
           </div>
-          <div className="mb-3 col-md-4">
-            <label className="form-label">Price per Week</label>
-            <input
-              type="number"
-              className="form-control"
-              value={pricePerWeek}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v === "" || Number(v) >= 0) setPricePerWeek(v);
-              }}
-              min={0}
-            />
-          </div>
-          <div className="mb-3 col-md-4">
+          <div className="mb-3 col-md-6">
             <label className="form-label">Price per Month</label>
             <input
               type="number"
@@ -851,15 +955,6 @@ export default function EditListingPage() {
         {/* AVAILABILITY */}
         <div className="row">
           <div className="mb-3 col-md-6">
-            <label className="form-label">Available From</label>
-            <input
-              type="date"
-              className="form-control"
-              value={availableFrom}
-              onChange={(e) => setAvailableFrom(e.target.value)}
-            />
-          </div>
-          <div className="mb-3 col-md-6">
             <label className="form-label">Min Stay (nights)</label>
             <input
               type="number"
@@ -873,7 +968,7 @@ export default function EditListingPage() {
 
         {/* DEPOSIT */}
         <div className="mb-3">
-          <label className="form-label">Deposit (optional)</label>
+          <label className="form-label">Deposit (optional, USD)</label>
           <div className="input-group">
             <input
               type="number"
@@ -882,22 +977,99 @@ export default function EditListingPage() {
               onChange={(e) => setDepositAmount(e.target.value)}
               min={0}
             />
-            <select
-              className="form-select"
-              style={{ maxWidth: "110px" }}
-              value={depositCurrency}
-              onChange={(e) => setDepositCurrency(e.target.value)}
-            >
-              <option value="USD">USD</option>
-              <option value="LBP">LBP</option>
-            </select>
+            <span className="input-group-text">USD</span>
+          </div>
+        </div>
+
+        {/* BOOLEAN AMENITIES */}
+        <div className="mb-3">
+          <label className="form-label">Amenities</label>
+          <div className="row">
+            <div className="col-md-4">
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="hasWifi"
+                  checked={hasWifi}
+                  onChange={(e) => setHasWifi(e.target.checked)}
+                />
+                <label className="form-check-label" htmlFor="hasWifi">
+                  Wi-Fi
+                </label>
+              </div>
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="hasAirConditioning"
+                  checked={hasAirConditioning}
+                  onChange={(e) => setHasAirConditioning(e.target.checked)}
+                />
+                <label className="form-check-label" htmlFor="hasAirConditioning">
+                  Air Conditioning
+                </label>
+              </div>
+            </div>
+            <div className="col-md-4">
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="hasHeating"
+                  checked={hasHeating}
+                  onChange={(e) => setHasHeating(e.target.checked)}
+                />
+                <label className="form-check-label" htmlFor="hasHeating">
+                  Heating
+                </label>
+              </div>
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="hasParking"
+                  checked={hasParking}
+                  onChange={(e) => setHasParking(e.target.checked)}
+                />
+                <label className="form-check-label" htmlFor="hasParking">
+                  Parking
+                </label>
+              </div>
+            </div>
+            <div className="col-md-4">
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="hasLaundry"
+                  checked={hasLaundry}
+                  onChange={(e) => setHasLaundry(e.target.checked)}
+                />
+                <label className="form-check-label" htmlFor="hasLaundry">
+                  Laundry
+                </label>
+              </div>
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="isFurnished"
+                  checked={isFurnished}
+                  onChange={(e) => setIsFurnished(e.target.checked)}
+                />
+                <label className="form-check-label" htmlFor="isFurnished">
+                  Furnished
+                </label>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* AMENITIES / IMAGES / 3D */}
         <div className="mb-3">
           <label className="form-label">
-            Amenities (comma separated, e.g. WiFi, AC, Laundry)
+            Extra amenities (comma separated, e.g. Sea view, Near supermarket)
           </label>
           <input
             className="form-control"

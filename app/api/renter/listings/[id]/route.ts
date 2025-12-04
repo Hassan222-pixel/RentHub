@@ -85,29 +85,32 @@ export async function PUT(req: Request, context: RouteContext) {
 
       // PRICING
       pricePerNight,
-      pricePerWeek,
       pricePerMonth,
 
       // AVAILABILITY
-      availableFrom,
       minStayNights,
 
       // DEPOSIT
       depositAmount,
-      depositCurrency,
 
       // LOCATION
       latitude,
       longitude,
 
-      // MEDIA
+      // MEDIA / AMENITIES
+      hasWifi,
+      hasAirConditioning,
+      hasHeating,
+      hasParking,
+      hasLaundry,
+      isFurnished,
       amenities,
       images,
       profileImg,
       tour3DUrl,
     } = body;
 
-    // (Optional) server-side validation similar to POST
+    // Validation
     if (!title || !description || !city) {
       return NextResponse.json(
         { message: "Title, description and city are required" },
@@ -115,15 +118,30 @@ export async function PUT(req: Request, context: RouteContext) {
       );
     }
 
-    if (
-      pricePerNight == null &&
-      pricePerWeek == null &&
-      pricePerMonth == null
-    ) {
+    if (pricePerNight == null && pricePerMonth == null) {
       return NextResponse.json(
-        { message: "Please provide at least one price (night/week/month)" },
+        { message: "Please provide at least one price (night or month)" },
         { status: 400 }
       );
+    }
+
+    // Enforce maxOccupants on server
+    let finalMaxOccupants: number | undefined = undefined;
+    if (roomType === "private") {
+      finalMaxOccupants = 1;
+    } else if (roomType === "double") {
+      finalMaxOccupants = 2;
+    } else if (roomType === "shared") {
+      if (typeof maxOccupants !== "number" || maxOccupants < 1) {
+        return NextResponse.json(
+          {
+            message:
+              "Max occupants is required and must be >= 1 for shared rooms",
+          },
+          { status: 400 }
+        );
+      }
+      finalMaxOccupants = maxOccupants;
     }
 
     const updateData: any = {
@@ -136,30 +154,33 @@ export async function PUT(req: Request, context: RouteContext) {
 
       // ROOM
       roomType,
-      maxOccupants,
+      maxOccupants: finalMaxOccupants,
       genderPreference,
       allowsSmoking,
       allowsPets,
-      houseRules,
+      houseRules: Array.isArray(houseRules) ? houseRules : [],
 
       // PRICING
       pricePerNight,
-      pricePerWeek,
       pricePerMonth,
 
       // AVAILABILITY
-      availableFrom: availableFrom || undefined,
       minStayNights,
 
       // DEPOSIT
       depositAmount,
-      depositCurrency,
 
       // LOCATION
       latitude,
       longitude,
 
-      // MEDIA / EXTRAS
+      // MEDIA / AMENITIES
+      hasWifi: !!hasWifi,
+      hasAirConditioning: !!hasAirConditioning,
+      hasHeating: !!hasHeating,
+      hasParking: !!hasParking,
+      hasLaundry: !!hasLaundry,
+      isFurnished: !!isFurnished,
       amenities: Array.isArray(amenities) ? amenities : [],
       images: Array.isArray(images) ? images : [],
       profileImg,
