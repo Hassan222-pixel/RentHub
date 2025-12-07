@@ -26,7 +26,7 @@ interface Dorm {
   genderPreference?: GenderPreference;
   allowsSmoking?: boolean;
   allowsPets?: boolean;
-  houseRules?: string[];
+  houseRules?: string[] | string;
 
   // PRICING
   pricePerNight?: number;
@@ -172,7 +172,7 @@ export default function EditListingPage() {
       return;
     }
 
-    setProfileImg(data.url); // 👈 save uploaded URL
+    setProfileImg(data.url);
   };
 
   const uploadImage = async (file: File) => {
@@ -250,9 +250,7 @@ export default function EditListingPage() {
   const addHouseRule = () => {
     const value = houseRuleInput.trim();
     if (!value) return;
-    setHouseRules((prev) =>
-      prev.includes(value) ? prev : [...prev, value]
-    );
+    setHouseRules((prev) => (prev.includes(value) ? prev : [...prev, value]));
     setHouseRuleInput("");
   };
 
@@ -331,7 +329,21 @@ export default function EditListingPage() {
         );
         setAllowsSmoking(dorm.allowsSmoking ?? false);
         setAllowsPets(dorm.allowsPets ?? false);
-        setHouseRules(dorm.houseRules || []);
+
+        // HOUSE RULES: normalize from old string or new array
+        const rawHouseRules = dorm.houseRules as unknown;
+        let normalizedRules: string[] = [];
+        if (Array.isArray(rawHouseRules)) {
+          normalizedRules = rawHouseRules
+            .map((r) => (typeof r === "string" ? r.trim() : ""))
+            .filter(Boolean);
+        } else if (typeof rawHouseRules === "string") {
+          normalizedRules = rawHouseRules
+            .split(/\r?\n|,/)
+            .map((r) => r.trim())
+            .filter(Boolean);
+        }
+        setHouseRules(normalizedRules);
 
         // PRICING
         setPricePerNight(
@@ -389,7 +401,6 @@ export default function EditListingPage() {
   const universityOptions = useMemo(() => {
     if (!university) return universities;
     if (universities.some((u) => u.name === university)) return universities;
-    // add current value at top if not in list
     return [{ _id: "current", name: university }, ...universities];
   }, [universities, university]);
 
@@ -403,7 +414,7 @@ export default function EditListingPage() {
       return;
     }
     if (!mapContainerRef.current) return;
-    if (mapRef.current) return; // already initialized
+    if (mapRef.current) return;
 
     (async () => {
       try {
@@ -425,14 +436,12 @@ export default function EditListingPage() {
         mapRef.current = map;
         map.addControl(new mapboxgl.NavigationControl(), "top-right");
 
-        // Existing marker for saved coords
         if (longitude !== undefined && latitude !== undefined) {
           markerRef.current = new mapboxgl.Marker({ color: "#0b74de" })
             .setLngLat([longitude, latitude])
             .addTo(map);
         }
 
-        // Click to move marker
         map.on("click", (e: any) => {
           const { lng, lat } = e.lngLat;
           setLatitude(lat);
@@ -458,7 +467,6 @@ export default function EditListingPage() {
         markerRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, MAPBOX_TOKEN, latitude, longitude]);
 
   // =========================
@@ -585,7 +593,7 @@ export default function EditListingPage() {
           description,
           city,
           address,
-          university, // 👈 string, not array
+          university,
 
           roomType,
           maxOccupants,
@@ -593,11 +601,9 @@ export default function EditListingPage() {
           pricePerNight: pricePerNight !== "" ? Number(pricePerNight) : null,
           pricePerMonth: pricePerMonth !== "" ? Number(pricePerMonth) : null,
 
-          minStayNights:
-            minStayNights !== "" ? Number(minStayNights) : null,
+          minStayNights: minStayNights !== "" ? Number(minStayNights) : null,
 
-          depositAmount:
-            depositAmount !== "" ? Number(depositAmount) : null,
+          depositAmount: depositAmount !== "" ? Number(depositAmount) : null,
 
           genderPreference,
           allowsSmoking,
@@ -636,8 +642,8 @@ export default function EditListingPage() {
       }
 
       router.push("/renter/listings");
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
       setError("Something went wrong");
       setSaving(false);
     }
@@ -701,7 +707,7 @@ export default function EditListingPage() {
               autoComplete="off"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  e.preventDefault(); // stop form submit
+                  e.preventDefault();
                 }
               }}
             />
@@ -798,7 +804,6 @@ export default function EditListingPage() {
             </select>
           </div>
 
-          {/* Max occupants (shared only) */}
           {roomType === "shared" && (
             <div className="mb-3 col-md-4">
               <label className="form-label">Max Occupants</label>
@@ -901,7 +906,7 @@ export default function EditListingPage() {
               Add
             </button>
           </div>
-          {houseRules.length > 0 && (
+          {Array.isArray(houseRules) && houseRules.length > 0 && (
             <div className="d-flex flex-wrap gap-2">
               {houseRules.map((rule) => (
                 <span
@@ -912,10 +917,11 @@ export default function EditListingPage() {
                   {rule}
                   <button
                     type="button"
-                    className="btn-close btn-close-sm"
-                    aria-label="Remove"
+                    className="btn btn-sm btn-outline-secondary p-0 px-1"
                     onClick={() => removeHouseRule(rule)}
-                  />
+                  >
+                    ×
+                  </button>
                 </span>
               ))}
             </div>
@@ -1006,7 +1012,10 @@ export default function EditListingPage() {
                   checked={hasAirConditioning}
                   onChange={(e) => setHasAirConditioning(e.target.checked)}
                 />
-                <label className="form-check-label" htmlFor="hasAirConditioning">
+                <label
+                  className="form-check-label"
+                  htmlFor="hasAirConditioning"
+                >
                   Air Conditioning
                 </label>
               </div>
