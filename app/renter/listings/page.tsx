@@ -1,19 +1,21 @@
+/* eslint-disable @next/next/no-img-element */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// app/renter/listings/page.tsx
 "use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { FaEdit, FaTrash } from "react-icons/fa";
 
 interface Dorm {
   _id: string;
   title: string;
   description: string;
   city: string;
-  university?: string;
   pricePerNight?: number;
   pricePerMonth?: number;
   createdAt: string;
+  profileImg?: string;
+  roomType?: "private" | "double" | "shared";
 }
 
 export default function RenterListingsPage() {
@@ -47,14 +49,11 @@ export default function RenterListingsPage() {
     };
 
     load();
-
     return () => controller.abort();
   }, []);
 
   const handleDelete = async (id: string) => {
-    const ok = window.confirm(
-      "Are you sure you want to delete this listing? This action cannot be undone."
-    );
+    const ok = window.confirm("Are you sure you want to delete this listing?");
     if (!ok) return;
 
     try {
@@ -65,15 +64,12 @@ export default function RenterListingsPage() {
         method: "DELETE",
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        console.error("Delete error:", data);
+        const data = await res.json();
         setError(data.message || "Failed to delete listing");
         return;
       }
 
-      // Remove from UI
       setListings((prev) => prev.filter((l) => l._id !== id));
     } catch (err) {
       console.error("Delete error:", err);
@@ -81,6 +77,14 @@ export default function RenterListingsPage() {
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const formatRoomType = (type?: Dorm["roomType"]) => {
+    if (!type) return "";
+    if (type === "private") return "Private room";
+    if (type === "double") return "Double room";
+    if (type === "shared") return "Shared room";
+    return type;
   };
 
   return (
@@ -96,68 +100,97 @@ export default function RenterListingsPage() {
 
       {loading && (
         <div className="d-flex justify-content-center align-items-center py-5">
-          <div className="spinner-border text-primary me-2" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
+          <div className="spinner-border text-primary me-2" />
           <span>Loading listings...</span>
         </div>
       )}
 
       {!loading && listings.length === 0 && !error && (
-        <p>
-          You have no listings yet. Click &quot;Add Listing&rdquo; to create
-          one.
-        </p>
+        <p>You have no listings yet.</p>
       )}
 
       {!loading && listings.length > 0 && (
-        <div className="row g-3">
+        <div className="row g-4">
           {listings.map((listing) => (
             <div key={listing._id} className="col-md-4">
-              <div className="card h-100 bg-transparent border-secondary">
+              <div className="card h-100 border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                {/* IMAGE */}
+                <div className="position-relative">
+                  {listing.profileImg ? (
+                    <img
+                      src={listing.profileImg}
+                      alt={listing.title}
+                      className="w-100"
+                      style={{
+                        height: 190,
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      className="w-100 bg-light d-flex justify-content-center align-items-center text-muted"
+                      style={{ height: 190 }}
+                    >
+                      No Image
+                    </div>
+                  )}
+
+                  {/* PRICE BADGE */}
+                  {(listing.pricePerMonth || listing.pricePerNight) && (
+                    <div className="position-absolute bottom-0 start-0 m-2 px-3 py-1 rounded-pill bg-primary text-white small">
+                      {listing.pricePerNight && (
+                        <span className="me-3">
+                          Night: ${listing.pricePerNight}
+                        </span>
+                      )}
+                      {listing.pricePerMonth && (
+                        <span>   Month: ${listing.pricePerMonth}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* BODY */}
                 <div className="card-body d-flex flex-column">
-                  <h5 className="card-title">{listing.title}</h5>
-                  <p className="card-text small text-muted mb-1">
-                    {listing.city}
-                    {listing.university ? ` · ${listing.university}` : ""}
-                  </p>
-                  <p className="card-text small flex-grow-1">
-                    {listing.description.length > 120
-                      ? listing.description.slice(0, 120) + "..."
-                      : listing.description}
-                  </p>
-                  <div className="mt-2">
-                    {listing.pricePerMonth !== undefined && (
-                      <div className="small">
-                        <strong>${listing.pricePerMonth}</strong> / month
-                      </div>
-                    )}
-                    {listing.pricePerNight !== undefined && (
-                      <div className="small text-muted">
-                        ${listing.pricePerNight} / night
-                      </div>
+                  <p className="text-muted small mb-1">{listing.city}</p>
+
+                  <div className="d-flex justify-content-between align-items-start mb-2">
+                    <h5 className="card-title mb-0">{listing.title}</h5>
+
+                    {listing.roomType && (
+                      <span className="badge bg-secondary-subtle text-secondary-emphasis small ms-2">
+                        {formatRoomType(listing.roomType)}
+                      </span>
                     )}
                   </div>
 
-                  <div className="mt-3 d-flex justify-content-between align-items-center gap-2">
-                    <div className="btn-group btn-group-sm" role="group">
+                  <p className="card-text small text-muted mb-3">
+                    {listing.description.length > 110
+                      ? listing.description.slice(0, 110) + "..."
+                      : listing.description}
+                  </p>
+
+                  <div className="mt-auto d-flex justify-content-between align-items-center">
+                    <div className="btn-group btn-group-sm">
                       <Link
                         href={`/renter/listings/${listing._id}/edit`}
                         className="btn btn-outline-primary"
+                        title="Edit"
                       >
-                        Edit
+                        <FaEdit size={14} />
                       </Link>
+
                       <button
-                        type="button"
                         className="btn btn-outline-danger"
                         onClick={() => handleDelete(listing._id)}
                         disabled={deletingId === listing._id}
+                        title="Delete"
                       >
-                        {deletingId === listing._id ? "Deleting..." : "Delete"}
+                        <FaTrash size={14} />
                       </button>
                     </div>
 
-                    <small className="text-muted ms-2">
+                    <small className="text-muted">
                       {new Date(listing.createdAt).toLocaleDateString()}
                     </small>
                   </div>
