@@ -1,5 +1,6 @@
-// app/renter/layout.tsx
 "use client";
+
+import "./renter.css"; // ⬅️ the scoped renter styles
 
 import { ReactNode, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -49,7 +50,6 @@ export default function RenterLayout({ children }: { children: ReactNode }) {
         }
         const data = await res.json();
         if (data.user.role !== "renter") {
-          // if logged-in but not renter, send to admin dashboard
           router.replace("/dashboard");
           return;
         }

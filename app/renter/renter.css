@@ -1,24 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
 @import "mapbox-gl/dist/mapbox-gl.css";
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
-
-body {
-  font-family: 'Poppins', sans-serif;
-  background: #f5f7fa;
-}
-
-html,
-body {
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-
-
 
 /* =======================
    THEME TOKENS
@@ -108,25 +95,21 @@ body {
 }
 
 /* =======================
-   GLOBAL
+   GLOBAL (SCOPED TO RENTER)
 ======================= */
-
-
 
 .renthub-body {
   margin: 0;
+}
+
+.renthub-app {
+  max-width: 100%;
   min-height: 100vh;
+  overflow-x: hidden;
   background-color: var(--rh-bg);
   color: var(--rh-text);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
-}
-
-.renthub-app {
-  min-height: 100vh;
-  background-color: var(--rh-bg);
-  color: var(--rh-text);
-  overflow-x: hidden;
 }
 
 /* =======================
@@ -392,16 +375,17 @@ body {
   padding: 8px 4px;
 }
 
-.renthub-logout-btn {
-  font-size: 0.8rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
+/* Logout button (scoped) */
+.renthub-app .btn-outline-light.renthub-logout-btn {
+  border-radius: 999px;
+  border-color: var(--rh-border);
+  color: var(--rh-text);
+  background-color: transparent;
 }
 
-.renthub-logout-icon {
-  flex-shrink: 0;
+.renthub-app .btn-outline-light.renthub-logout-btn:hover {
+  background: rgba(148, 163, 184, 0.18);
+  border-color: var(--rh-border);
 }
 
 /* =======================
@@ -424,52 +408,52 @@ body {
 }
 
 /* =======================
-   TABLES & FORMS
+   TABLES & FORMS (SCOPED)
 ======================= */
 
-.table {
+.renthub-app .table {
   color: var(--rh-text);
   font-size: 0.85rem;
 }
 
-.table thead th {
+.renthub-app .table thead th {
   border-bottom-color: var(--rh-border);
   color: var(--rh-muted);
   font-weight: 500;
 }
 
-.table tbody tr {
+.renthub-app .table tbody tr {
   border-color: var(--rh-border);
 }
 
-.table tbody tr:hover {
+.renthub-app .table tbody tr:hover {
   background: rgba(148, 163, 184, 0.12);
 }
 
-.form-control,
-.form-select {
+.renthub-app .form-control,
+.renthub-app .form-select {
   background-color: var(--rh-bg-card);
   border-color: var(--rh-border);
   color: var(--rh-text);
 }
 
-.form-control:focus,
-.form-select:focus {
+.renthub-app .form-control:focus,
+.renthub-app .form-select:focus {
   background-color: var(--rh-bg-card);
   border-color: var(--rh-primary);
   box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.4);
 }
 
-label.form-label {
+.renthub-app label.form-label {
   color: var(--rh-muted);
   font-size: 0.85rem;
 }
 
 /* =======================
-   BUTTONS
+   BUTTONS (SCOPED)
 ======================= */
 
-.btn-primary {
+.renthub-app .btn-primary {
   background-color: var(--rh-primary);
   border-color: var(--rh-primary);
   border-radius: 999px;
@@ -478,21 +462,9 @@ label.form-label {
   color: #ffffff;
 }
 
-.btn-primary:hover {
+.renthub-app .btn-primary:hover {
   background-color: var(--rh-primary-hover);
   border-color: var(--rh-primary-hover);
-}
-
-.btn-outline-light.renthub-logout-btn {
-  border-radius: 999px;
-  border-color: var(--rh-border);
-  color: var(--rh-text);
-  background-color: transparent;
-}
-
-.btn-outline-light.renthub-logout-btn:hover {
-  background: rgba(148, 163, 184, 0.18);
-  border-color: var(--rh-border);
 }
 
 /* =======================
@@ -576,24 +548,24 @@ label.form-label {
 }
 
 /* =======================
-   CARDS (Bootstrap overrides)
+   CARDS (Bootstrap overrides, SCOPED)
 ======================= */
 
-.card {
+.renthub-app .card {
   background-color: var(--rh-bg-card);
   color: var(--rh-text);
   border-color: var(--rh-border);
 }
 
-.card .card-title {
+.renthub-app .card .card-title {
   color: var(--rh-text);
 }
 
-.card .card-text {
+.renthub-app .card .card-text {
   color: var(--rh-text);
 }
 
-/* Make all "muted" text use the theme-muted color */
-.text-muted {
+/* Make all "muted" text in renter area use the theme-muted color */
+.renthub-app .text-muted {
   color: var(--rh-muted) !important;
 }
