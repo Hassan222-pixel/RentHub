@@ -1,0 +1,25 @@
+.search-box-full {
+  background: #fff;
+  width: 900px;
+  padding: 16px;
+  border-radius: 40px;
+  display: flex;
+  gap: 16px;
+}
+
+.search-box-full select {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+
+.search-btn {
+  padding: 12px 28px;
+  background: linear-gradient(90deg, #00ff87, #00a3ff);
+  color: white;
+  font-weight: 600;
+  border-radius: 30px;
+  border: none;
+  cursor: pointer;
+}

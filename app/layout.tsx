@@ -1,26 +1,20 @@
-import type { Metadata } from "next";
 import "./globals.css";
+import TemplateHeader from "./components/TemplateHeader";
+import TemplateFooter from "./components/TemplateFooter";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "RentHub",
-  description: "Dormitory booking platform",
+  description: "Real estate platform",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <head>
-        {/* Template CSS */}
-        <link rel="stylesheet" href="/template/css/bootstrap.min.css" />
-        <link rel="stylesheet" href="/template/css/style.css" />
-        <link rel="stylesheet" href="/template/css/responsive.css" />
-        <link rel="stylesheet" href="/template/css/jquery.mCustomScrollbar.min.css" />
-      </head>
-      <body>{children}</body>
+      <body>
+        <TemplateHeader />
+        {children}
+        <TemplateFooter />
+      </body>
     </html>
   );
 }

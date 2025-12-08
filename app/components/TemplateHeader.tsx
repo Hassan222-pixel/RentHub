@@ -3,6 +3,7 @@
 "use client";
 
 import Link from "next/link";
+<<<<<<< HEAD
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
@@ -14,6 +15,9 @@ interface CurrentUser {
   role: string;
   permissions?: string[];
 }
+=======
+import "./header.css";
+>>>>>>> origin/frontend
 
 export default function TemplateHeader() {
   const [user, setUser] = useState<CurrentUser | null>(null);
@@ -74,6 +78,7 @@ export default function TemplateHeader() {
   };
 
   return (
+<<<<<<< HEAD
     <header>
       <div className="header">
         <div className="container">
@@ -198,7 +203,27 @@ export default function TemplateHeader() {
               </nav>
             </div>
           </div>
+=======
+    <header className="navbar">
+      <div className="nav-container">
+
+        <div className="logo">
+          <span>bluesky</span>
+>>>>>>> origin/frontend
         </div>
+
+        <nav className="nav-links">
+          <Link href="/">Home</Link>
+          <Link href="/about">About us</Link>
+          <Link href="/properties">Properties</Link>
+          <Link href="/news">News</Link>
+          <Link href="/contact">Contact</Link>
+        </nav>
+
+        <a href="tel:6523453222" className="call-btn">
+          📞 652-345-3222
+        </a>
+
       </div>
 
       {/* Extra CSS to make header buttons match the template "Book Now" style */}
