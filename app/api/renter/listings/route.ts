@@ -7,7 +7,7 @@ import { getCurrentUserFromApi } from "@/lib/currentUser";
 // Minimal user shape we care about in this route
 type CurrentUser = {
   _id: string;
-  role: string; // or more specific if you want: "renter" | "admin" | "super-admin" | "manager" | "client"
+  role: string; // "renter" | "admin" | ...
 };
 
 export async function GET() {
@@ -45,19 +45,48 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
+
     const {
+      // BASIC
       title,
       description,
       city,
       address,
       university,
+
+      // ROOM
+      roomType,
+      maxOccupants,
+      genderPreference,
+      allowsSmoking,
+      allowsPets,
+      houseRules,
+
+      // PRICING
       pricePerNight,
+      pricePerWeek,
       pricePerMonth,
+
+      // AVAILABILITY
+      availableFrom,
+      minStayNights,
+
+      // DEPOSIT
+      depositAmount,
+      depositCurrency,
+
+      // LOCATION
+      latitude,
+      longitude,
+
+      // EXTRAS
       amenities,
       images,
+      profileImg,
       tour3DUrl,
     } = body;
 
+    // Basic validation
     if (!title || !description || !city) {
       return NextResponse.json(
         { message: "Title, description and city are required" },
@@ -65,17 +94,58 @@ export async function POST(req: Request) {
       );
     }
 
+    // Optional: make sure there is at least one price
+    if (
+      pricePerNight == null &&
+      pricePerWeek == null &&
+      pricePerMonth == null
+    ) {
+      return NextResponse.json(
+        { message: "Please provide at least one price (night/week/month)" },
+        { status: 400 }
+      );
+    }
+
     const dorm = await Dorm.create({
       owner: user._id,
+
+      // BASIC
       title,
       description,
       city,
       address,
       university,
+
+      // ROOM
+      roomType,
+      maxOccupants,
+      genderPreference,
+      allowsSmoking,
+      allowsPets,
+      houseRules,
+
+      // PRICING
       pricePerNight,
+      pricePerWeek,
       pricePerMonth,
-      amenities: amenities || [],
-      images: images || [],
+
+      // AVAILABILITY
+      // Frontend sends a date string or null; Mongoose can cast
+      availableFrom: availableFrom || undefined,
+      minStayNights,
+
+      // DEPOSIT
+      depositAmount,
+      depositCurrency,
+
+      // LOCATION
+      latitude,
+      longitude,
+
+      // EXTRAS
+      amenities: Array.isArray(amenities) ? amenities : [],
+      images: Array.isArray(images) ? images : [],
+      profileImg,
       tour3DUrl,
     });
 

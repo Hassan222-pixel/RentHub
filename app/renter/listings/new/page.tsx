@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // app/renter/listings/new/page.tsx
 "use client";
@@ -5,8 +6,7 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
-type RoomType = "room" | "bed" | "studio" | "apartment" | "";
-type RentalType = "daily" | "weekly" | "monthly" | "flexible" | "";
+type RoomType = "private" | "double" | "shared" | "";
 type GenderPreference = "any" | "male" | "female" | "";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN as string;
@@ -17,6 +17,11 @@ interface MapboxFeature {
   text: string;
   center: [number, number]; // [lng, lat]
   context?: { id: string; text: string }[];
+}
+
+interface UniversityOption {
+  _id: string;
+  name: string;
 }
 
 export default function NewListingPage() {
@@ -32,7 +37,6 @@ export default function NewListingPage() {
 
   // ROOM DETAILS
   const [roomType, setRoomType] = useState<RoomType>("");
-  const [maxOccupants, setMaxOccupants] = useState("");
 
   // PRICING
   const [pricePerNight, setPricePerNight] = useState("");
@@ -41,27 +45,26 @@ export default function NewListingPage() {
 
   // AVAILABILITY
   const [availableFrom, setAvailableFrom] = useState("");
-  const [availableTo, setAvailableTo] = useState("");
   const [minStayNights, setMinStayNights] = useState("");
-  const [maxStayNights, setMaxStayNights] = useState("");
-
-  // TERMS
-  const [rentalType, setRentalType] = useState<RentalType>("flexible");
-  const [isRefundable, setIsRefundable] = useState(true);
-  const [cancellationPolicy, setCancellationPolicy] = useState("");
-  const [depositAmount, setDepositAmount] = useState("");
-  const [depositCurrency, setDepositCurrency] = useState("USD");
 
   // RULES
   const [genderPreference, setGenderPreference] =
     useState<GenderPreference>("any");
   const [allowsSmoking, setAllowsSmoking] = useState(false);
   const [allowsPets, setAllowsPets] = useState(false);
+  const [houseRules, setHouseRules] = useState("");
+
+  // DEPOSIT
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositCurrency, setDepositCurrency] = useState("USD");
 
   // EXTRAS
   const [amenities, setAmenities] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [tour3DUrl, setTour3DUrl] = useState("");
+
+  const [profileImg, setProfileImg] = useState("");
+  const [profileUploading, setProfileUploading] = useState(false);
 
   // DRAG & DROP STATE
   const [isDragging, setIsDragging] = useState(false);
@@ -83,9 +86,36 @@ export default function NewListingPage() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [universities, setUniversities] = useState<UniversityOption[]>([]);
+  const [uniError, setUniError] = useState("");
+
   // =========================
   // IMAGE UPLOAD HANDLERS (NO BASE64)
   // =========================
+
+  const uploadProfileImg = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    setProfileUploading(true);
+
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json();
+
+    setProfileUploading(false);
+
+    if (!res.ok) {
+      alert("Failed to upload profile image");
+      return;
+    }
+
+    setProfileImg(data.url); // 👈 save uploaded URL
+  };
+
   const uploadImage = async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -209,6 +239,32 @@ export default function NewListingPage() {
     };
   }, []);
 
+  //for university
+  // =========================
+  // LOAD UNIVERSITIES FOR DROPDOWN
+  // =========================
+  useEffect(() => {
+    const loadUniversities = async () => {
+      try {
+        setUniError("");
+        const res = await fetch("/api/universities");
+        const data = await res.json();
+
+        if (!res.ok) {
+          setUniError(data.message || "Failed to load universities");
+          return;
+        }
+
+        setUniversities(data.universities || []);
+      } catch (err) {
+        console.error("Error loading universities:", err);
+        setUniError("Failed to load universities");
+      }
+    };
+
+    loadUniversities();
+  }, []);
+
   // When coordinates change from search → move marker
   useEffect(() => {
     if (!mapRef.current || latitude === undefined || longitude === undefined)
@@ -290,6 +346,14 @@ export default function NewListingPage() {
     setAddress(feature.text);
   };
 
+  // Helper: simple maxOccupants by roomType (used only in API payload)
+  const getMaxOccupantsFromRoomType = (type: RoomType): number | null => {
+    if (type === "private") return 1;
+    if (type === "double") return 2;
+    if (type === "shared") return 3; // or 4, up to you
+    return null;
+  };
+
   // =========================
   // SUBMIT
   // =========================
@@ -298,7 +362,23 @@ export default function NewListingPage() {
     setError("");
     setSaving(true);
 
+    // Basic front-end validation
+    if (!title || !description || !city) {
+      setError("Title, description and city are required");
+      setSaving(false);
+      return;
+    }
+
+    // require at least one price (optional but good)
+    if (!pricePerNight && !pricePerWeek && !pricePerMonth) {
+      setError("Please provide at least one price (night/week/month)");
+      setSaving(false);
+      return;
+    }
+
     try {
+      const maxOccupants = getMaxOccupantsFromRoomType(roomType);
+
       const res = await fetch("/api/renter/listings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -310,20 +390,14 @@ export default function NewListingPage() {
           university,
 
           roomType,
-          maxOccupants: maxOccupants !== "" ? Number(maxOccupants) : null,
+          maxOccupants, // derived
 
           pricePerNight: pricePerNight !== "" ? Number(pricePerNight) : null,
           pricePerWeek: pricePerWeek !== "" ? Number(pricePerWeek) : null,
           pricePerMonth: pricePerMonth !== "" ? Number(pricePerMonth) : null,
 
-          availableFrom: availableFrom ? new Date(availableFrom) : null,
-          availableTo: availableTo ? new Date(availableTo) : null,
+          availableFrom: availableFrom || null,
           minStayNights: minStayNights !== "" ? Number(minStayNights) : null,
-          maxStayNights: maxStayNights !== "" ? Number(maxStayNights) : null,
-
-          rentalType,
-          isRefundable,
-          cancellationPolicy,
 
           depositAmount: depositAmount !== "" ? Number(depositAmount) : null,
           depositCurrency,
@@ -331,6 +405,7 @@ export default function NewListingPage() {
           genderPreference,
           allowsSmoking,
           allowsPets,
+          houseRules,
 
           latitude,
           longitude,
@@ -343,6 +418,7 @@ export default function NewListingPage() {
             : [],
 
           images,
+          profileImg,
           tour3DUrl,
         }),
       });
@@ -420,7 +496,13 @@ export default function NewListingPage() {
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               autoComplete="off"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault(); // stop form submit
+                }
+              }}
             />
+
             {showSearchResults && searchResults.length > 0 && (
               <div
                 className="list-group position-absolute w-100 mt-1"
@@ -481,11 +563,21 @@ export default function NewListingPage() {
 
         <div className="mb-3">
           <label className="form-label">University</label>
-          <input
-            className="form-control"
+          <select
+            className="form-select"
             value={university}
             onChange={(e) => setUniversity(e.target.value)}
-          />
+          >
+            <option value="">Select university</option>
+            {universities.map((u) => (
+              <option key={u._id} value={u.name}>
+                {u.name}
+              </option>
+            ))}
+          </select>
+          {uniError && (
+            <small className="text-danger d-block mt-1">{uniError}</small>
+          )}
         </div>
 
         {/* ROOM DETAILS */}
@@ -498,21 +590,10 @@ export default function NewListingPage() {
               onChange={(e) => setRoomType(e.target.value as RoomType)}
             >
               <option value="">Select type</option>
-              <option value="room">Private room</option>
-              <option value="bed">Bed in shared room</option>
-              <option value="studio">Studio</option>
-              <option value="apartment">Full apartment</option>
+              <option value="private">Private room</option>
+              <option value="double">Double room</option>
+              <option value="shared">Shared room</option>
             </select>
-          </div>
-          <div className="mb-3 col-md-6">
-            <label className="form-label">Max Occupants</label>
-            <input
-              type="number"
-              className="form-control"
-              value={maxOccupants}
-              onChange={(e) => setMaxOccupants(e.target.value)}
-              min={1}
-            />
           </div>
         </div>
 
@@ -561,7 +642,7 @@ export default function NewListingPage() {
 
         {/* AVAILABILITY */}
         <div className="row">
-          <div className="mb-3 col-md-3">
+          <div className="mb-3 col-md-6">
             <label className="form-label">Available From</label>
             <input
               type="date"
@@ -570,16 +651,7 @@ export default function NewListingPage() {
               onChange={(e) => setAvailableFrom(e.target.value)}
             />
           </div>
-          <div className="mb-3 col-md-3">
-            <label className="form-label">Available To</label>
-            <input
-              type="date"
-              className="form-control"
-              value={availableTo}
-              onChange={(e) => setAvailableTo(e.target.value)}
-            />
-          </div>
-          <div className="mb-3 col-md-3">
+          <div className="mb-3 col-md-6">
             <label className="form-label">Min Stay (nights)</label>
             <input
               type="number"
@@ -589,79 +661,6 @@ export default function NewListingPage() {
               min={1}
             />
           </div>
-          <div className="mb-3 col-md-3">
-            <label className="form-label">Max Stay (nights)</label>
-            <input
-              type="number"
-              className="form-control"
-              value={maxStayNights}
-              onChange={(e) => setMaxStayNights(e.target.value)}
-              min={1}
-            />
-          </div>
-        </div>
-
-        {/* RENTAL TERMS */}
-        <div className="row">
-          <div className="mb-3 col-md-4">
-            <label className="form-label">Main Rental Type</label>
-            <select
-              className="form-select"
-              value={rentalType}
-              onChange={(e) => setRentalType(e.target.value as RentalType)}
-            >
-              <option value="flexible">Flexible</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
-          </div>
-          <div className="mb-3 col-md-4 d-flex align-items-center">
-            <div className="form-check mt-3 mt-md-4">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="isRefundable"
-                checked={isRefundable}
-                onChange={(e) => setIsRefundable(e.target.checked)}
-              />
-              <label className="form-check-label" htmlFor="isRefundable">
-                Refundable booking
-              </label>
-            </div>
-          </div>
-          <div className="mb-3 col-md-4">
-            <label className="form-label">Deposit Amount</label>
-            <div className="input-group">
-              <input
-                type="number"
-                className="form-control"
-                value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
-                min={0}
-              />
-              <select
-                className="form-select"
-                style={{ maxWidth: "110px" }}
-                value={depositCurrency}
-                onChange={(e) => setDepositCurrency(e.target.value)}
-              >
-                <option value="USD">USD</option>
-                <option value="LBP">LBP</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Cancellation Policy</label>
-          <textarea
-            className="form-control"
-            rows={3}
-            placeholder="E.g. Full refund up to 7 days before check-in..."
-            value={cancellationPolicy}
-            onChange={(e) => setCancellationPolicy(e.target.value)}
-          />
         </div>
 
         {/* RULES */}
@@ -710,6 +709,40 @@ export default function NewListingPage() {
           </div>
         </div>
 
+        <div className="mb-3">
+          <label className="form-label">Other Rules / Notes</label>
+          <textarea
+            className="form-control"
+            rows={3}
+            placeholder="e.g. No loud music after 11pm, no visitors after midnight..."
+            value={houseRules}
+            onChange={(e) => setHouseRules(e.target.value)}
+          />
+        </div>
+
+        {/* DEPOSIT */}
+        <div className="mb-3">
+          <label className="form-label">Deposit (optional)</label>
+          <div className="input-group">
+            <input
+              type="number"
+              className="form-control"
+              value={depositAmount}
+              onChange={(e) => setDepositAmount(e.target.value)}
+              min={0}
+            />
+            <select
+              className="form-select"
+              style={{ maxWidth: "110px" }}
+              value={depositCurrency}
+              onChange={(e) => setDepositCurrency(e.target.value)}
+            >
+              <option value="USD">USD</option>
+              <option value="LBP">LBP</option>
+            </select>
+          </div>
+        </div>
+
         {/* AMENITIES / IMAGES / 3D */}
         <div className="mb-3">
           <label className="form-label">
@@ -720,6 +753,35 @@ export default function NewListingPage() {
             value={amenities}
             onChange={(e) => setAmenities(e.target.value)}
           />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Profile Image</label>
+          <input
+            type="file"
+            accept="image/*"
+            className="form-control"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) uploadProfileImg(file);
+            }}
+          />
+
+          {profileUploading && <p className="text-muted">Uploading...</p>}
+
+          {profileImg && (
+            <img
+              src={profileImg}
+              alt="Profile"
+              style={{
+                width: 120,
+                height: 120,
+                marginTop: 10,
+                borderRadius: 8,
+                objectFit: "cover",
+              }}
+            />
+          )}
         </div>
 
         {/* IMAGES - DRAG & DROP + PREVIEW */}
@@ -794,7 +856,6 @@ export default function NewListingPage() {
                   className="position-relative"
                   style={{ width: 100, height: 100 }}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={src}
                     alt={`Image ${idx + 1}`}

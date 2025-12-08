@@ -1,13 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/renter/bookings/route.ts
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Booking } from "@/models/Booking";
 import { getCurrentUserFromApi } from "@/lib/currentUser";
 
-// Minimal user shape we care about in this route
 type CurrentUser = {
   _id: string;
-  role: string; // or more specific: "renter" | "admin" | "super-admin" | "manager" | "client"
+  role: string;
 };
 
 export async function GET() {
@@ -20,11 +20,20 @@ export async function GET() {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const bookings = await Booking.find({ renter: user._id })
+    const bookingsRaw = await Booking.find({
+      renter: user._id,
+      status: "confirmed",
+    })
       .populate("dorm")
       .populate("client", "name email")
-      .sort({ createdAt: -1 })
+      .sort({ startDate: 1 })
       .lean();
+
+    // Convert _id (ObjectId) to string
+    const bookings = bookingsRaw.map((b: any) => ({
+      ...b,
+      _id: b._id.toString(),
+    }));
 
     return NextResponse.json({ bookings });
   } catch (err) {

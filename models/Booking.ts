@@ -1,4 +1,3 @@
-// models/Booking.ts
 import mongoose, { Schema, Document, models } from "mongoose";
 import { IDorm } from "./Dorm";
 import { IUser } from "./User";
@@ -13,6 +12,7 @@ export interface IBooking extends Document {
   endDate: Date;
   totalPrice: number;
   status: BookingStatus;
+  cancelReason?: string; // e.g. "conflict", "renter_cancelled"
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,6 +30,8 @@ const BookingSchema = new Schema<IBooking>(
       enum: ["pending", "confirmed", "cancelled"],
       default: "pending",
     },
+    // Reason for cancellation (used to show a specific message to the client)
+    cancelReason: { type: String },
   },
   { timestamps: true }
 );

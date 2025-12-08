@@ -2,6 +2,9 @@
 import mongoose, { Schema, Document, models } from "mongoose";
 import { IUser } from "./User";
 
+export type DormRoomType = "private" | "double" | "shared";
+export type DormGenderPreference = "any" | "male" | "female";
+
 export interface IDorm extends Document {
   owner: IUser["_id"]; // renter user
   title: string;
@@ -10,30 +13,26 @@ export interface IDorm extends Document {
   address?: string;
   university?: string;
 
-  // Pricing
+  // Pricing (you can later decide to only use one of them)
   pricePerNight?: number;
   pricePerWeek?: number;
   pricePerMonth?: number;
 
   // Availability basics
   availableFrom?: Date;
-  availableTo?: Date;
   minStayNights?: number;
-  maxStayNights?: number;
-
-  // Rental terms
-  rentalType?: "daily" | "weekly" | "monthly" | "flexible";
-  isRefundable: boolean;
-  cancellationPolicy?: string;
-  depositAmount?: number;
-  depositCurrency?: string;
 
   // Room details / rules
-  roomType?: "room" | "bed" | "studio" | "apartment";
-  maxOccupants?: number;
-  genderPreference?: "any" | "male" | "female";
+  roomType?: DormRoomType; // private / double / shared
+  maxOccupants?: number; // derived on creation, not from form
+  genderPreference?: DormGenderPreference;
   allowsSmoking: boolean;
   allowsPets: boolean;
+  houseRules?: string;
+
+  // Deposit
+  depositAmount?: number;
+  depositCurrency?: string; // "USD" | "LBP" etc.
 
   // Location (for map & filtering)
   latitude?: number;
@@ -41,6 +40,7 @@ export interface IDorm extends Document {
 
   amenities: string[];
   images: string[];
+  profileImg?: string; // cover image
   tour3DUrl?: string;
   isActive: boolean;
   createdAt: Date;
@@ -64,25 +64,12 @@ const DormSchema = new Schema<IDorm>(
 
     // Availability
     availableFrom: { type: Date },
-    availableTo: { type: Date },
     minStayNights: { type: Number },
-    maxStayNights: { type: Number },
-
-    // Rental terms
-    rentalType: {
-      type: String,
-      enum: ["daily", "weekly", "monthly", "flexible"],
-      default: "flexible",
-    },
-    isRefundable: { type: Boolean, default: true },
-    cancellationPolicy: { type: String },
-    depositAmount: { type: Number },
-    depositCurrency: { type: String, default: "USD" },
 
     // Room details / rules
     roomType: {
       type: String,
-      enum: ["room", "bed", "studio", "apartment"],
+      enum: ["private", "double", "shared"],
     },
     maxOccupants: { type: Number },
     genderPreference: {
@@ -92,6 +79,11 @@ const DormSchema = new Schema<IDorm>(
     },
     allowsSmoking: { type: Boolean, default: false },
     allowsPets: { type: Boolean, default: false },
+    houseRules: { type: String },
+
+    // Deposit
+    depositAmount: { type: Number },
+    depositCurrency: { type: String, default: "USD" },
 
     // Location
     latitude: { type: Number },
@@ -99,6 +91,7 @@ const DormSchema = new Schema<IDorm>(
 
     amenities: [{ type: String }],
     images: [{ type: String }],
+    profileImg: { type: String },
     tour3DUrl: { type: String },
     isActive: { type: Boolean, default: true },
   },

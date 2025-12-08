@@ -19,15 +19,15 @@ export default function LoginPage() {
       headers: { "Content-Type": "application/json" },
     });
 
- if (!res.ok) {
-  const data = await res.json();
-  setError(data.message || "Login failed");
-  return;
-}
+    if (!res.ok) {
+      const data = await res.json();
+      setError(data.message || "Login failed");
+      return;
+    }
 
-const data = await res.json();
+    const data = await res.json();
 
-if (data.user.role === "super-admin") {
+    if (data.user.role === "super-admin") {
       router.push("/dashboard");
     } else if (data.user.role === "renter") {
       router.push("/renter");
@@ -38,7 +38,6 @@ if (data.user.role === "super-admin") {
     } else {
       setError("Unknown user role");
     }
-
   };
 
   return (
@@ -75,9 +74,7 @@ if (data.user.role === "super-admin") {
           Admin Login
         </h2>
 
-        {error && (
-          <div className="alert alert-danger text-center">{error}</div>
-        )}
+        {error && <div className="alert alert-danger text-center">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
