@@ -1,16 +1,41 @@
-"use client";
-
 import TemplateHeader from "@/app/components/TemplateHeader";
 import TemplateFooter from "@/app/components/TemplateFooter";
+import { connectToDatabase } from "@/lib/mongodb";
+import { Dorm } from "@/models/Dorm";
+import RoomFilterList from "@/app/room/RoomFilterList";
 
-export default function HomePage() {
+export default async function HomePage() {
+  await connectToDatabase();
+
+  // Load all active dorms
+  const dormDocs = await Dorm.find({ isActive: true })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const dorms = dormDocs.map((d: any) => ({
+    _id: d._id.toString(),
+    title: d.title,
+    description: d.description,
+    profileImg: d.profileImg || null,
+    roomType: d.roomType || null,
+    city: d.city || "",
+    university: d.university || "",
+    pricePerNight: d.pricePerNight ?? null,
+    pricePerWeek: d.pricePerWeek ?? null,
+    pricePerMonth: d.pricePerMonth ?? null,
+  }));
+
+  // Get unique cities + universities
+  const uniqueCities = [...new Set(dorms.map((d) => d.city).filter(Boolean))];
+  const uniqueUniversities = [...new Set(dorms.map((d) => d.university).filter(Boolean))];
+
   return (
     <div className="main-layout">
 
       {/* ================= HEADER ================= */}
       <TemplateHeader />
 
-      {/* ================= BANNER / HERO SECTION ================= */}
+      {/* ================= HERO SECTION ================= */}
       <section className="banner_main">
         <div id="myCarousel" className="carousel slide banner">
           <ol className="carousel-indicators">
@@ -95,154 +120,80 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ================= OUR ROOM SECTION ================= */}
-      <div className="our_room">
+      {/* ================= OUR ROOMS SECTION (REAL DATA) ================= */}
+      <div className="our_room" style={{ marginTop: "40px" }}>
         <div className="container">
+
           <div className="row">
             <div className="col-md-12">
               <div className="titlepage">
-                <h2>Our Room</h2>
-                <p>Lorem Ipsum available, but the majority have suffered</p>
+                <h2>Our Rooms</h2>
+                <p>Browse all available dormitories</p>
               </div>
             </div>
           </div>
 
+          <RoomFilterList initialDorms={dorms} />
+        </div>
+      </div>
+
+      {/* ================= OUR CITIES ================= */}
+      <div className="our_room" style={{ marginTop: "70px" }}>
+        <div className="container">
+
+          <div className="titlepage text-center mb-4">
+            <h2>Our Cities</h2>
+            <p>Select a city to explore available dorms</p>
+          </div>
+
           <div className="row">
-            {[1, 2, 3, 4, 5, 6].map((num) => (
-              <div key={num} className="col-md-4 col-sm-6">
-                <div id="serv_hover" className="room">
-                  <div className="room_img">
-                    <figure>
-                      <img src={`/template/images/room${num}.jpg`} alt={`Room ${num}`} />
-                    </figure>
-                  </div>
-                  <div className="bed_room">
-                    <h3>Bed Room</h3>
-                    <p>If you are going to use a passage of Lorem Ipsum, you need to be sure there</p>
+            {uniqueCities.map((city) => (
+              <div key={city} className="col-md-4 col-sm-6 mb-4">
+                <div className="room city_card">
+                  <div className="bed_room text-center p-4">
+                    <h3>{city}</h3>
+                    <p>View all dormitories located in {city}</p>
+                    <a href={`/city/${city}`} className="read_more">View City</a>
                   </div>
                 </div>
               </div>
             ))}
+
+            {uniqueCities.length === 0 && (
+              <p className="text-center w-100">No cities available yet.</p>
+            )}
           </div>
 
         </div>
       </div>
 
-      {/* ================= GALLERY SECTION ================= */}
-      <div className="gallery">
+      {/* ================= OUR UNIVERSITIES ================= */}
+      <div className="our_room" style={{ marginTop: "70px" }}>
         <div className="container">
-          <div className="row">
-            <div className="col-md-12">
-              <div className="titlepage">
-                <h2>Gallery</h2>
-              </div>
-            </div>
+
+          <div className="titlepage text-center mb-4">
+            <h2>Our Universities</h2>
+            <p>Select a university to view nearby dormitories</p>
           </div>
 
           <div className="row">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-              <div key={num} className="col-md-3 col-sm-6">
-                <div className="gallery_img">
-                  <figure>
-                    <img src={`/template/images/gallery${num}.jpg`} alt={`Gallery ${num}`} />
-                  </figure>
-                </div>
-              </div>
-            ))}
-          </div>
-
-        </div>
-      </div>
-
-      {/* ================= BLOG SECTION ================= */}
-      <div className="blog">
-        <div className="container">
-          <div className="row">
-            <div className="col-md-12">
-              <div className="titlepage">
-                <h2>Blog</h2>
-                <p>Lorem Ipsum available, but the majority have suffered</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="row">
-            {[1, 2, 3].map((num) => (
-              <div key={num} className="col-md-4">
-                <div className="blog_box">
-                  <div className="blog_img">
-                    <figure>
-                      <img src={`/template/images/blog${num}.jpg`} alt={`Blog ${num}`} />
-                    </figure>
-                  </div>
-                  <div className="blog_room">
-                    <h3>Bed Room</h3>
-                    <span>The standard chunk</span>
-                    <p>
-                      If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything
-                      embarrassing hidden in the middle of text.
-                    </p>
+            {uniqueUniversities.map((univ) => (
+              <div key={univ} className="col-md-4 col-sm-6 mb-4">
+                <div className="room city_card">
+                  <div className="bed_room text-center p-4">
+                    <h3>{univ}</h3>
+                    <p>Dormitories near {univ}</p>
+                    <a href={`/university/${univ}`} className="read_more">View University</a>
                   </div>
                 </div>
               </div>
             ))}
+
+            {uniqueUniversities.length === 0 && (
+              <p className="text-center w-100">No universities available yet.</p>
+            )}
           </div>
 
-        </div>
-      </div>
-
-      {/* ================= CONTACT SECTION ================= */}
-      <div className="contact">
-        <div className="container">
-          <div className="row">
-            <div className="col-md-12">
-              <div className="titlepage">
-                <h2>Contact Us</h2>
-              </div>
-            </div>
-          </div>
-
-          <div className="row">
-
-            <div className="col-md-6">
-              <form className="main_form">
-                <div className="row">
-                  <div className="col-md-12">
-                    <input className="contactus" placeholder="Name" type="text" />
-                  </div>
-                  <div className="col-md-12">
-                    <input className="contactus" placeholder="Email" type="email" />
-                  </div>
-                  <div className="col-md-12">
-                    <input className="contactus" placeholder="Phone Number" type="text" />
-                  </div>
-                  <div className="col-md-12">
-                    <textarea className="textarea" placeholder="Message" defaultValue={""}></textarea>
-                  </div>
-                  <div className="col-md-12">
-                    <button className="send_btn" type="button">Send</button>
-                  </div>
-                </div>
-              </form>
-            </div>
-
-            {/* Map */}
-            <div className="col-md-6">
-              <div className="map_main">
-                <div className="map-responsive">
-                  <iframe
-                    src="https://www.google.com/maps/embed/v1/place?key=AIzaSyA0s1a7phLN0iaD6-UE7m4qP-z21pH0eSc&q=Eiffel+Tower+Paris+France"
-                    width="600"
-                    height="400"
-                    style={{ border: 0, width: "100%" }}
-                    allowFullScreen
-                    loading="lazy"
-                  ></iframe>
-                </div>
-              </div>
-            </div>
-
-          </div>
         </div>
       </div>
 
