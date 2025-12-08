@@ -1,0 +1,100 @@
+.recent-section {
+  padding: 60px 0;
+  background: #f5f7fa;
+}
+
+.recent-container {
+  width: 90%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.recent-header h2 {
+  font-size: 28px;
+  margin-bottom: 5px;
+}
+
+.recent-header p {
+  color: #777;
+  margin-bottom: 25px;
+}
+
+.recent-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.property-card {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.property-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.12);
+}
+
+.property-image {
+  height: 180px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.property-badge {
+  position: absolute;
+  left: 15px;
+  top: 15px;
+  background: #1f74ff;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.property-info {
+  padding: 15px 18px 18px;
+}
+
+.property-info h3 {
+  font-size: 18px;
+  margin-bottom: 5px;
+}
+
+.property-city {
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 10px;
+}
+
+.property-price {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f74ff;
+}
+
+.recent-footer {
+  margin-top: 30px;
+  text-align: center;
+}
+
+.see-more-btn {
+  padding: 10px 26px;
+  border-radius: 25px;
+  border: 1px solid #1f74ff;
+  background: transparent;
+  color: #1f74ff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.see-more-btn:hover {
+  background: #1f74ff;
+  color: #fff;
+}

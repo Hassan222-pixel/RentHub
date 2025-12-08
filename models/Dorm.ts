@@ -13,32 +13,41 @@ export interface IDorm extends Document {
   address?: string;
   university?: string;
 
-  // Pricing (you can later decide to only use one of them)
+  // Pricing
   pricePerNight?: number;
-  pricePerWeek?: number;
   pricePerMonth?: number;
 
   // Availability basics
-  availableFrom?: Date;
   minStayNights?: number;
 
   // Room details / rules
   roomType?: DormRoomType; // private / double / shared
-  maxOccupants?: number; // derived on creation, not from form
+  maxOccupants?: number; // derived for private/double, user-set for shared
   genderPreference?: DormGenderPreference;
+
+  // Rules
   allowsSmoking: boolean;
   allowsPets: boolean;
-  houseRules?: string;
+  houseRules?: string[]; // list of rules
 
-  // Deposit
+  // Deposit (always USD conceptually)
   depositAmount?: number;
-  depositCurrency?: string; // "USD" | "LBP" etc.
 
   // Location (for map & filtering)
   latitude?: number;
   longitude?: number;
 
+  // Boolean amenities
+  hasWifi: boolean;
+  hasAirConditioning: boolean;
+  hasHeating: boolean;
+  hasParking: boolean;
+  hasLaundry: boolean;
+  isFurnished: boolean;
+
+  // Extra amenities tags
   amenities: string[];
+
   images: string[];
   profileImg?: string; // cover image
   tour3DUrl?: string;
@@ -59,11 +68,9 @@ const DormSchema = new Schema<IDorm>(
 
     // Pricing
     pricePerNight: { type: Number },
-    pricePerWeek: { type: Number },
     pricePerMonth: { type: Number },
 
     // Availability
-    availableFrom: { type: Date },
     minStayNights: { type: Number },
 
     // Room details / rules
@@ -77,19 +84,30 @@ const DormSchema = new Schema<IDorm>(
       enum: ["any", "male", "female"],
       default: "any",
     },
+
+    // Rules
     allowsSmoking: { type: Boolean, default: false },
     allowsPets: { type: Boolean, default: false },
-    houseRules: { type: String },
+    houseRules: [{ type: String }],
 
     // Deposit
     depositAmount: { type: Number },
-    depositCurrency: { type: String, default: "USD" },
 
     // Location
     latitude: { type: Number },
     longitude: { type: Number },
 
+    // Boolean amenities
+    hasWifi: { type: Boolean, default: false },
+    hasAirConditioning: { type: Boolean, default: false },
+    hasHeating: { type: Boolean, default: false },
+    hasParking: { type: Boolean, default: false },
+    hasLaundry: { type: Boolean, default: false },
+    isFurnished: { type: Boolean, default: false },
+
+    // Extra amenities tags
     amenities: [{ type: String }],
+
     images: [{ type: String }],
     profileImg: { type: String },
     tour3DUrl: { type: String },

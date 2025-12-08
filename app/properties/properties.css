@@ -1,0 +1,123 @@
+/* HERO SECTION */
+.search-hero {
+  height: 380px;
+  background-image: url("https://preview.colorlib.com/theme/bluesky/img/banner/home-banner.jpg");
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.search-hero-overlay {
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  text-align: center;
+  padding-top: 85px;
+  color: #fff;
+}
+
+.breadcrumb {
+  margin-top: 5px;
+  opacity: 0.9;
+}
+
+.hero-search-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 25px;
+}
+
+/* TITLE + SUBTEXT */
+.results-title {
+  width: 90%;
+  max-width: 1200px;
+  margin: 40px auto;
+}
+
+.results-title h2 {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+/* PROPERTY GRID */
+.property-grid {
+  width: 90%;
+  max-width: 1250px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+}
+
+/* PROPERTY CARD */
+.property-card {
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+}
+
+.property-img {
+  height: 200px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-featured { background: #f50c6a; }
+.badge-offer { background: #ffb200; }
+.badge-new { background: #00c98d; }
+
+/* PROPERTY CARD CONTENT */
+.property-info {
+  padding: 18px;
+}
+
+.city {
+  font-size: 14px;
+  color: #7d7d7d;
+}
+
+.property-info h3 {
+  margin: 4px 0;
+  font-size: 17px;
+}
+
+.price {
+  font-weight: 700;
+  color: #1f74ff;
+}
+
+/* PROPERTY FOOTER */
+.property-footer {
+  background: #1a1a1a;
+  color: #fff;
+  padding: 12px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* PAGINATION */
+.pagination {
+  text-align: center;
+  margin: 35px 0;
+}
+
+.pagination span {
+  margin: 0 6px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #1f74ff;
+}

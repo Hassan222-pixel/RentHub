@@ -64,20 +64,25 @@ export async function POST(req: Request) {
 
       // PRICING
       pricePerNight,
-      pricePerWeek,
       pricePerMonth,
 
       // AVAILABILITY
-      availableFrom,
       minStayNights,
 
       // DEPOSIT
       depositAmount,
-      depositCurrency,
 
       // LOCATION
       latitude,
       longitude,
+
+      // BOOLEAN AMENITIES
+      hasWifi,
+      hasAirConditioning,
+      hasHeating,
+      hasParking,
+      hasLaundry,
+      isFurnished,
 
       // EXTRAS
       amenities,
@@ -94,16 +99,31 @@ export async function POST(req: Request) {
       );
     }
 
-    // Optional: make sure there is at least one price
-    if (
-      pricePerNight == null &&
-      pricePerWeek == null &&
-      pricePerMonth == null
-    ) {
+    // At least one price
+    if (pricePerNight == null && pricePerMonth == null) {
       return NextResponse.json(
-        { message: "Please provide at least one price (night/week/month)" },
+        { message: "Please provide at least one price (night or month)" },
         { status: 400 }
       );
+    }
+
+    // Enforce maxOccupants on server as well
+    let finalMaxOccupants: number | undefined = undefined;
+    if (roomType === "private") {
+      finalMaxOccupants = 1;
+    } else if (roomType === "double") {
+      finalMaxOccupants = 2;
+    } else if (roomType === "shared") {
+      if (typeof maxOccupants !== "number" || maxOccupants < 1) {
+        return NextResponse.json(
+          {
+            message:
+              "Max occupants is required and must be >= 1 for shared rooms",
+          },
+          { status: 400 }
+        );
+      }
+      finalMaxOccupants = maxOccupants;
     }
 
     const dorm = await Dorm.create({
@@ -118,29 +138,33 @@ export async function POST(req: Request) {
 
       // ROOM
       roomType,
-      maxOccupants,
+      maxOccupants: finalMaxOccupants,
       genderPreference,
       allowsSmoking,
       allowsPets,
-      houseRules,
+      houseRules: Array.isArray(houseRules) ? houseRules : [],
 
       // PRICING
       pricePerNight,
-      pricePerWeek,
       pricePerMonth,
 
       // AVAILABILITY
-      // Frontend sends a date string or null; Mongoose can cast
-      availableFrom: availableFrom || undefined,
       minStayNights,
 
       // DEPOSIT
       depositAmount,
-      depositCurrency,
 
       // LOCATION
       latitude,
       longitude,
+
+      // BOOLEAN AMENITIES
+      hasWifi: !!hasWifi,
+      hasAirConditioning: !!hasAirConditioning,
+      hasHeating: !!hasHeating,
+      hasParking: !!hasParking,
+      hasLaundry: !!hasLaundry,
+      isFurnished: !!isFurnished,
 
       // EXTRAS
       amenities: Array.isArray(amenities) ? amenities : [],

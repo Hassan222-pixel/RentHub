@@ -1,8 +1,9 @@
-"use client";
 
+"use client";
 import { useEffect, useState } from "react";
-import TemplateHeader from "@/app/components/TemplateHeader";
-import TemplateFooter from "@/app/components/TemplateFooter";
+import "../about/about.css";
+import HeroSearch from "../components/Herosearch";
+import Newsletter from "../components/Newsletter";
 
 type AboutData = {
   title: string;
@@ -45,54 +46,127 @@ export default function AboutPage() {
   }, []);
 
   return (
-    <div className="main-layout">
+    <main className="about-wrapper">
 
-      <TemplateHeader />
+      {/* HERO SECTION */}
+      <div className="about-hero">
+        <div className="about-hero-overlay">
 
-      {/* Banner Header */}
-      <div className="back_re">
-        <div className="container">
-          <div className="row">
-            <div className="col-md-12">
-              <div className="title">
-                <h2>{about.title}</h2>
-              </div>
-            </div>
+          <h1>About</h1>
+          <p className="breadcrumb">Home / About us</p>
+
+          <div className="hero-search-container">
+            <HeroSearch />
           </div>
+
         </div>
       </div>
 
-      {/* About Section */}
-      <div className="about">
-        <div className="container-fluid">
-          <div className="row">
+      {/* ABOUT MAIN SECTION */}
+      <section className="about-section">
 
-            <div className="col-md-5">
-              <div className="titlepage">
-                <p className="margin_0">{about.content}</p>
-                <a className="read_more" href="#">
-                  {about.buttonText}
-                </a>
-              </div>
-            </div>
+        {/* LEFT COLUMN TEXT */}
+        <div className="about-left">
+          <h2>A few words about us</h2>
+          <p className="subtitle">Search your dream home</p>
 
-            <div className="col-md-7">
-              <div className="about_img">
-                <figure>
-                  <img
-                    src={about.imageUrl || "/template/images/about.png"}
-                    alt="About Us"
-                  />
-                </figure>
-              </div>
-            </div>
+          <p className="about-text">
+            Etiam nec odio vestibulum est mattis effic iutur magna. Pellentesque sit amet tellus
+            blandit. Etiam nec odio vestibulum est mattis effic iutur magna. Pellentesque sit amet
+            tellus blandit. Etiam nec odio vestibulum est mattis effic iutur magna.
+          </p>
 
+          <p className="about-text">
+            Cras ut vestibulum enim, in gravida nulla. Curabitur ornare nisl at sagittis cursus.
+            Sed mattis, eros non vulputate luctus, erat dui dapibus augue, eu fringilla tortor
+            ante id mi. Sed a enim libero. Vestibulum pharetra aliquam convallis.
+          </p>
+        </div>
+
+        {/* RIGHT IMAGE */}
+        <div className="about-right">
+          <img
+            src="https://preview.colorlib.com/theme/bluesky/img/about/about.jpg"
+            alt="building"
+          />
+        </div>
+
+      </section>
+
+      {/* ICON STATS */}
+      <section className="about-stats">
+        <div className="stat">
+          <img src="https://preview.colorlib.com/theme/bluesky/img/icons/ci-3.png" />
+          <div>
+            <h3>651</h3>
+            <p>Properties Sold</p>
           </div>
         </div>
-      </div>
 
-      <TemplateFooter />
+        <div className="stat">
+          <img src="https://preview.colorlib.com/theme/bluesky/img/icons/ci-2.png" />
+          <div>
+            <h3>1256</h3>
+            <p>Happy Clients</p>
+          </div>
+        </div>
 
-    </div>
+        <div className="stat">
+          <img src="https://preview.colorlib.com/theme/bluesky/img/icons/ci-4.png" />
+          <div>
+            <h3>124</h3>
+            <p>Buildings Sold</p>
+          </div>
+        </div>
+
+        <div className="stat">
+          <img src="https://preview.colorlib.com/theme/bluesky/img/icons/ci-1.png" />
+          <div>
+            <h3>25</h3>
+            <p>Awards Won</p>
+          </div>
+        </div>
+      </section>
+
+      {/* TEAM SECTION */}
+      <section className="team-section">
+        <h2>The Realtors</h2>
+        <p className="subtitle">Search your dream home</p>
+
+        <div className="team-grid">
+
+          <div className="team-card">
+            <img src="https://preview.colorlib.com/theme/bluesky/img/team/t1.jpg" />
+            <h3>Maria Williams</h3>
+            <p>Senior Realtor</p>
+            <div className="circle-btn">+</div>
+          </div>
+
+          <div className="team-card">
+            <img src="https://preview.colorlib.com/theme/bluesky/img/team/t2.jpg" />
+            <h3>Christian Smith</h3>
+            <p>Senior Realtor</p>
+            <div className="circle-btn">+</div>
+          </div>
+
+          <div className="team-card">
+            <img src="https://preview.colorlib.com/theme/bluesky/img/team/t3.jpg" />
+            <h3>Steve G. Brown</h3>
+            <p>Senior Realtor</p>
+            <div className="circle-btn">+</div>
+          </div>
+
+          <div className="team-card">
+            <img src="https://preview.colorlib.com/theme/bluesky/img/team/t4.jpg" />
+            <h3>Jessica Walsh</h3>
+            <p>Senior Realtor</p>
+            <div className="circle-btn">+</div>
+          </div>
+
+        </div>
+      </section>
+
+      <Newsletter />
+    </main>
   );
 }

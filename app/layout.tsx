@@ -1,26 +1,28 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import LayoutWrapper from "./components/LayoutWrapper";
 
 export const metadata: Metadata = {
   title: "RentHub",
   description: "Dormitory booking platform",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
-        {/* Template CSS */}
         <link rel="stylesheet" href="/template/css/bootstrap.min.css" />
         <link rel="stylesheet" href="/template/css/style.css" />
         <link rel="stylesheet" href="/template/css/responsive.css" />
-        <link rel="stylesheet" href="/template/css/jquery.mCustomScrollbar.min.css" />
+        <link
+          rel="stylesheet"
+          href="/template/css/jquery.mCustomScrollbar.min.css"
+        />
       </head>
-      <body>{children}</body>
+
+      <body>
+        <LayoutWrapper>{children}</LayoutWrapper>
+      </body>
     </html>
   );
 }
