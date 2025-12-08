@@ -1,79 +1,85 @@
-"use client";
-
-import TemplateHeader from "@/app/components/TemplateHeader";
-import TemplateFooter from "@/app/components/TemplateFooter";
+import "../contact/contact.css";
+import HeroSearch from "../components/Herosearch";
+import Newsletter from "../components/Newsletter";
 
 export default function ContactPage() {
   return (
-    <div className="main-layout">
-      <TemplateHeader />
+    <main className="contact-wrapper">
 
-      {/* PAGE TITLE */}
-      <div className="back_re">
-        <div className="container">
-          <div className="row">
-            <div className="col-md-12">
-              <div className="title">
-                <h2>Contact Us</h2>
-              </div>
-            </div>
+      {/* HERO SECTION */}
+      <div className="contact-hero">
+        <div className="contact-hero-overlay">
+
+          <h1>Contact</h1>
+          <p className="breadcrumb">Home / Contact</p>
+
+          <div className="hero-search-container">
+            <HeroSearch />
           </div>
+
         </div>
       </div>
 
-      {/* CONTACT SECTION */}
-      <div className="contact">
-        <div className="container">
-          <div className="row">
+      {/* CONTACT CONTENT */}
+      <section className="contact-section">
+        
+        {/* LEFT COLUMN */}
+        <div className="contact-left">
+          <h2>Get in touch with us</h2>
+          <p className="subtitle">Say hello</p>
 
-            {/* FORM */}
-            <div className="col-md-6">
-              <form className="main_form">
-                <div className="row">
-                  <div className="col-md-12">
-                    <input className="contactus" placeholder="Name" type="text" />
-                  </div>
+          <p className="contact-text">
+            Donec ullamcorper nulla non metus auctor fringilla. Curabitur blandit tempus porttitor.
+            Sed lectus urna, ultricies sit amet risus eget, euismod imperdiet augue.
+          </p>
 
-                  <div className="col-md-12">
-                    <input className="contactus" placeholder="Email" type="email" />
-                  </div>
+          <p className="contact-text">
+            <strong>Address:</strong><br />
+            1481 Creekside Lane Avila Beach, CA 93424
+          </p>
 
-                  <div className="col-md-12">
-                    <input className="contactus" placeholder="Phone Number" type="text" />
-                  </div>
+          <p className="contact-text">
+            <strong>Phone:</strong><br />
+            +53 345 7953 32453
+          </p>
 
-                  <div className="col-md-12">
-                    <textarea className="textarea" placeholder="Message" defaultValue=""></textarea>
-                  </div>
-
-                  <div className="col-md-12">
-                    <button className="send_btn" type="button">Send</button>
-                  </div>
-                </div>
-              </form>
-            </div>
-
-            {/* MAP */}
-            <div className="col-md-6">
-              <div className="map_main">
-                <div className="map-responsive">
-                  <iframe
-                    src="https://www.google.com/maps/embed/v1/place?key=AIzaSyA0s1a7phLN0iaD6-UE7m4qP-z21pH0eSc&q=Eiffel+Tower+Paris+France"
-                    width="600"
-                    height="400"
-                    style={{ border: 0, width: "100%" }}
-                    allowFullScreen
-                    loading="lazy"
-                  ></iframe>
-                </div>
-              </div>
-            </div>
-
-          </div>
+          <p className="contact-text">
+            <strong>Email:</strong><br />
+            yourmail@gmail.com
+          </p>
         </div>
-      </div>
 
-      <TemplateFooter />
-    </div>
+        {/* RIGHT COLUMN — FORM */}
+        <form className="contact-form">
+          
+          <div className="row">
+            <input type="text" placeholder="Name" required />
+            <input type="email" placeholder="E-mail" required />
+          </div>
+
+          <input className="subject-input" type="text" placeholder="Subject" required />
+
+          <textarea placeholder="Message" required></textarea>
+
+          <button type="submit" className="send-btn">SEND</button>
+        </form>
+
+      </section>
+
+      {/* GOOGLE MAPS */}
+      <section className="map-section">
+        <iframe
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d423287.7558192953!2d-118.69192043476312!3d34.0201613063695!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x80c2c0bf83b6a5f9%3A0x94e558577d975da2!2sLos%20Angeles%2C%20CA!5e0!3m2!1sen!2sus!4v1700000000000"
+          width="100%"
+          height="450"
+          allowFullScreen
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        ></iframe>
+      </section>
+
+      <Newsletter />
+
+    </main>
   );
 }
