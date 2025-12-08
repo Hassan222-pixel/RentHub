@@ -10,7 +10,9 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   // Routes where we hide header & footer
   const hideLayout =
     pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/login");
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/register")||
+    pathname.startsWith("/renter");
 
   return (
     <>
