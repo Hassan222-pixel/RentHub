@@ -2,12 +2,33 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Booking } from "@/models/Booking";
+import { Dorm } from "@/models/Dorm";
 import { getCurrentUserFromApi } from "@/lib/currentUser";
 
 type CurrentUser = {
   _id: string;
   role: string;
 };
+
+// Helper: compute dorm capacity based on roomType + maxOccupants
+function getDormCapacity(dorm: any): number {
+  if (!dorm) return 1;
+
+  const roomType = dorm.roomType as "private" | "double" | "shared" | undefined;
+
+  if (roomType === "private") return 1;
+  if (roomType === "double") return 2;
+
+  if (roomType === "shared") {
+    if (typeof dorm.maxOccupants === "number" && dorm.maxOccupants > 0) {
+      return dorm.maxOccupants;
+    }
+    return 1;
+  }
+
+  // default safety
+  return 1;
+}
 
 export async function GET() {
   try {
@@ -24,26 +45,31 @@ export async function GET() {
       renter: user._id,
       status: "pending",
     })
-      .populate("dorm", "title profileImg city")
+      .populate("dorm", "title profileImg city roomType maxOccupants")
       .populate("client", "name email")
       .sort({ createdAt: -1 });
 
-    // For each pending request, check if there is already a confirmed booking
-    // for the same dorm and overlapping dates.
+    // For each pending request, see if capacity is already fully used
     const requestsWithConflictFlag = await Promise.all(
       requestDocs.map(async (doc) => {
-        const conflictExists = await Booking.exists({
+        const obj = doc.toObject();
+
+        const dorm: any = obj.dorm;
+        const capacity = getDormCapacity(dorm);
+
+        const overlappingConfirmedCount = await Booking.countDocuments({
           _id: { $ne: doc._id },
-          dorm: doc.dorm, // Mongoose will use the dorm _id
+          dorm: doc.dorm,
           status: "confirmed",
           startDate: { $lt: doc.endDate },
           endDate: { $gt: doc.startDate },
         });
 
-        const obj = doc.toObject();
+        const hasConflict = overlappingConfirmedCount >= capacity;
+
         return {
           ...obj,
-          hasConflict: !!conflictExists,
+          hasConflict,
         };
       })
     );
@@ -97,21 +123,30 @@ export async function PATCH(req: Request) {
     }
 
     if (action === "confirm") {
-      // Before confirming, make sure there is no other confirmed booking
-      // for the same dorm and overlapping dates.
-      const overlappingConfirmed = await Booking.findOne({
+      // Before confirming, check capacity for this dorm and this period
+      const dormDoc: any = await Dorm.findById(booking.dorm).lean();
+      if (!dormDoc || dormDoc.isActive === false) {
+        return NextResponse.json(
+          { message: "Dorm not found" },
+          { status: 404 }
+        );
+      }
+
+      const capacity = getDormCapacity(dormDoc);
+
+      const overlappingConfirmedCount = await Booking.countDocuments({
         _id: { $ne: booking._id },
         dorm: booking.dorm,
         status: "confirmed",
         startDate: { $lt: booking.endDate },
         endDate: { $gt: booking.startDate },
-      }).lean();
+      });
 
-      if (overlappingConfirmed) {
+      if (overlappingConfirmedCount >= capacity) {
         return NextResponse.json(
           {
             message:
-              "This room already has a confirmed booking that overlaps this period.",
+              "This room already has the maximum confirmed bookings for this period.",
           },
           { status: 409 }
         );

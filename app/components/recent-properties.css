@@ -40,7 +40,7 @@
 }
 
 .property-image {
-  height: 180px;
+  height: 230px;
   background-size: cover;
   background-position: center;
   position: relative;
@@ -68,9 +68,10 @@
 }
 
 .property-city {
-  font-size: 14px;
+  font-size: 13px;
   color: #888;
-  margin-bottom: 10px;
+  margin-top: 4px;
+  margin-bottom: 6px;
 }
 
 .property-price {
@@ -99,9 +100,45 @@
   color: #fff;
 }
 
-
 .property-link-wrapper {
   text-decoration: none;
   color: inherit;
 }
 
+.property-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.property-footer {
+  background: #1a1a1a;
+  color: #fff;
+  padding: 10px 14px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.title-price-row h3 {
+  font-size: 17px;
+  margin: 0;
+}
+
+.property-price-inline {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f74ff;
+  white-space: nowrap;
+}

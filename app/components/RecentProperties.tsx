@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import "./recent-properties.css";
 
 export type PropertyCard = {
@@ -8,32 +9,11 @@ export type PropertyCard = {
   price: string;
   badge?: string;
   image: string;
-  href?: string; // optional link to details page
-};
+  href?: string;
 
-const defaultProperties: PropertyCard[] = [
-  {
-    title: "Modern apartment",
-    city: "Los Angeles, CA",
-    price: "$1,200 / month",
-    badge: "FOR RENT",
-    image: "https://images.unsplash.com/photo-1523217582562-09d0def993a6",
-  },
-  {
-    title: "Family house",
-    city: "Miami, FL",
-    price: "$320,000",
-    badge: "FOR SALE",
-    image: "https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6",
-  },
-  {
-    title: "Luxury villa",
-    city: "Florida, FL",
-    price: "$1,245,999",
-    badge: "OFFER",
-    image: "https://images.unsplash.com/photo-1613977257363-707ba9348227",
-  },
-];
+  bedsLabel?: string;
+  genderLabel?: string;
+};
 
 type Props = {
   properties?: PropertyCard[];
@@ -48,7 +28,7 @@ export default function RecentProperties({
   subtitle,
   showButton = true,
 }: Props) {
-  const list = properties && properties.length > 0 ? properties : defaultProperties;
+  const list = properties && properties.length > 0 ? properties : [];
 
   return (
     <section className="recent-section">
@@ -63,6 +43,20 @@ export default function RecentProperties({
 
         <div className="recent-grid">
           {list.map((p, index) => {
+            const key = p.id ?? index;
+
+            const isNotAvailable = p.badge === "Not available";
+            const isAvailable = p.badge === "Available";
+
+            const badgeStyle: CSSProperties = {};
+            if (isNotAvailable) {
+              badgeStyle.backgroundColor = "#dc3545"; // red
+              badgeStyle.color = "#ffffff";
+            } else if (isAvailable) {
+              badgeStyle.backgroundColor = "#198754"; // green
+              badgeStyle.color = "#ffffff";
+            }
+
             const card = (
               <div className="property-card">
                 <div
@@ -70,26 +64,34 @@ export default function RecentProperties({
                   style={{ backgroundImage: `url(${p.image})` }}
                 >
                   {p.badge && (
-                    <span className="property-badge">{p.badge}</span>
+                    <span className="property-badge" style={badgeStyle}>
+                      {p.badge}
+                    </span>
                   )}
                 </div>
 
                 <div className="property-info">
-                  <h3>{p.title}</h3>
+                  {/* ✅ TITLE + PRICE ON SAME LINE */}
+                  <div className="title-price-row">
+                    <h3>{p.title}</h3>
+                    <span className="property-price-inline">{p.price}</span>
+                  </div>
+
+                  {/* ✅ CITY UNDER THEM */}
                   <p className="property-city">{p.city}</p>
-                  <p className="property-price">{p.price}</p>
                 </div>
+
+                {(p.bedsLabel || p.genderLabel) && (
+                  <div className="property-footer">
+                    <span>{p.bedsLabel}</span>
+                    <span>{p.genderLabel}</span>
+                  </div>
+                )}
               </div>
             );
 
-            const key = p.id ?? index;
-
             return p.href ? (
-              <Link
-                key={key}
-                href={p.href}
-                className="property-link-wrapper"
-              >
+              <Link key={key} href={p.href} className="property-link-wrapper">
                 {card}
               </Link>
             ) : (

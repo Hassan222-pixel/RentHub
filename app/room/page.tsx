@@ -14,10 +14,19 @@ export type DormListItem = {
   profileImg?: string | null;
   roomType?: "private" | "double" | "shared" | null;
   city?: string;
-  university?: string;
   pricePerNight?: number | null;
   pricePerWeek?: number | null;
   pricePerMonth?: number | null;
+  maxOccupants?: number | null;
+  genderPreference?: "any" | "male" | "female" | null;
+
+  // availability info coming from /api/dorms
+  isOccupiedNow?: boolean;
+  occupiedUntil?: string | null;
+
+  // ✅ NEW: capacity & availableBeds for multi-tenant logic
+  capacity?: number | null;
+  availableBeds?: number | null;
 };
 
 function formatPrice(d: DormListItem): string {
@@ -33,6 +42,43 @@ function formatPrice(d: DormListItem): string {
   return "Contact for price";
 }
 
+// ✅ beds label now uses availableBeds if it exists (for double/shared logic)
+function formatBeds(d: DormListItem): string {
+  // If API sends availableBeds, we show how many beds are still free
+  if (typeof d.availableBeds === "number") {
+    if (d.availableBeds <= 0) {
+      return "🛏️ No beds available";
+    }
+    const label = d.availableBeds === 1 ? "bed available" : "beds available";
+    return `🛏️ ${d.availableBeds} ${label}`;
+  }
+
+  // Fallback to old static logic (in case API does not send availableBeds)
+  if (d.roomType === "private") {
+    return "🛏️ 1 bed";
+  }
+  if (d.roomType === "double") {
+    return "🛏️ 2 beds";
+  }
+  if (d.roomType === "shared") {
+    const count = d.maxOccupants ?? 1;
+    const label = count === 1 ? "bed" : "beds";
+    return `🛏️ ${count} ${label}`;
+  }
+  return "🛏️ N/A";
+}
+
+function formatGender(d: DormListItem): string {
+  const pref = d.genderPreference || "any";
+  if (pref === "male") {
+    return "👨 Only male";
+  }
+  if (pref === "female") {
+    return "👩 Only female";
+  }
+  return "👨👩 Any";
+}
+
 export default function RoomPage() {
   const [dorms, setDorms] = useState<DormListItem[]>([]);
   const [filteredDorms, setFilteredDorms] = useState<DormListItem[]>([]);
@@ -44,7 +90,6 @@ export default function RoomPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // 1) Load dorms
         const dormRes = await fetch("/api/dorms", { cache: "no-store" });
         const dormData = await dormRes.json();
         const dormList: DormListItem[] = dormData.dorms || [];
@@ -52,13 +97,11 @@ export default function RoomPage() {
         setDorms(dormList);
         setFilteredDorms(dormList);
 
-        // derive cities from dorms
         const uniqueCities = [
           ...new Set(dormList.map((d) => d.city).filter(Boolean) as string[]),
         ];
         setCities(uniqueCities);
 
-        // 2) Load universities (from API)
         const uniRes = await fetch("/api/universities", {
           cache: "no-store",
         });
@@ -82,17 +125,31 @@ export default function RoomPage() {
   }, []);
 
   // Build cards for RecentProperties based on filtered dorms
-  const cards: PropertyCard[] = filteredDorms.map((d) => ({
-    id: d._id,
-    title: d.title,
-    city: [d.city, d.university].filter(Boolean).join(" · ") || "Unknown",
-    price: formatPrice(d),
-    badge: d.roomType ? d.roomType.toUpperCase() : undefined,
-    image:
-      d.profileImg ||
-      "https://images.unsplash.com/photo-1523217582562-09d0def993a6",
-    href: `/room-details/${d._id}`,
-  }));
+  const cards: PropertyCard[] = filteredDorms.map((d) => {
+    // ✅ If availableBeds is provided, we consider Not available only when <= 0
+    const isFullyOccupied =
+      typeof d.availableBeds === "number"
+        ? d.availableBeds <= 0
+        : d.isOccupiedNow === true;
+
+    const statusBadge = isFullyOccupied ? "Not available" : "Available";
+
+    const cityLine = d.city || "Unknown";
+
+    return {
+      id: d._id,
+      title: d.title,
+      city: cityLine,
+      price: formatPrice(d),
+      badge: statusBadge,
+      image:
+        d.profileImg ||
+        "https://images.unsplash.com/photo-1523217582562-09d0def993a6",
+      href: `/room-details/${d._id}`,
+      bedsLabel: formatBeds(d),
+      genderLabel: formatGender(d),
+    };
+  });
 
   return (
     <div className="main-layout">
@@ -123,75 +180,13 @@ export default function RoomPage() {
         </div>
       </section>
 
-      {/* ROOMS LIST USING RecentProperties DESIGN */}
+      {/* ✅ ROOMS LIST ONLY */}
       <RecentProperties
         properties={cards}
         title="Available rooms"
         subtitle="Browse all currently active rooms from our renters."
         showButton={false}
       />
-
-      {/* OUR CITIES SECTION */}
-      <div className="our_room" style={{ marginTop: "70px" }}>
-        <div className="container">
-          <div className="titlepage text-center mb-4">
-            <h2>Our Cities</h2>
-            <p>Select a city to explore available dorms</p>
-          </div>
-
-          <div className="row">
-            {cities.map((city) => (
-              <div key={city} className="col-md-4 col-sm-6 mb-4">
-                <div className="room city_card">
-                  <div className="bed_room text-center p-4">
-                    <h3>{city}</h3>
-                    <p>View all dormitories located in {city}</p>
-                    <a href={`/city/${city}`} className="read_more">
-                      View City
-                    </a>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {cities.length === 0 && !loading && (
-              <p className="text-center w-100">No cities available yet.</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* OUR UNIVERSITIES SECTION */}
-      <div className="our_room" style={{ marginTop: "70px" }}>
-        <div className="container">
-          <div className="titlepage text-center mb-4">
-            <h2>Our Universities</h2>
-            <p>Select a university to view nearby dormitories</p>
-          </div>
-
-          <div className="row">
-            {universities.map((univ) => (
-              <div key={univ} className="col-md-4 col-sm-6 mb-4">
-                <div className="room city_card">
-                  <div className="bed_room text-center p-4">
-                    <h3>{univ}</h3>
-                    <p>Dormitories near {univ}</p>
-                    <a href={`/university/${univ}`} className="read_more">
-                      View University
-                    </a>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {universities.length === 0 && !loading && (
-              <p className="text-center w-100">
-                No universities available yet.
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

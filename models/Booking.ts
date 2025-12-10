@@ -8,6 +8,12 @@ export interface IBooking extends Document {
   dorm: IDorm["_id"];
   renter: IUser["_id"]; // owner / landlord
   client: IUser["_id"]; // student
+
+  // Client snapshot info at the time of booking
+  clientFirstName?: string;
+  clientLastName?: string;
+  clientPhone?: string;
+
   startDate: Date;
   endDate: Date;
   totalPrice: number;
@@ -22,6 +28,11 @@ const BookingSchema = new Schema<IBooking>(
     dorm: { type: Schema.Types.ObjectId, ref: "Dorm", required: true },
     renter: { type: Schema.Types.ObjectId, ref: "User", required: true },
     client: { type: Schema.Types.ObjectId, ref: "User", required: true },
+
+    clientFirstName: { type: String },
+    clientLastName: { type: String },
+    clientPhone: { type: String },
+
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     totalPrice: { type: Number, required: true },

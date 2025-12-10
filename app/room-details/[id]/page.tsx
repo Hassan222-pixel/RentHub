@@ -2,13 +2,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import TemplateHeader from "@/app/components/TemplateHeader";
 import TemplateFooter from "@/app/components/TemplateFooter";
 
 // This type should match (or be compatible with) your Mongoose Dorm model.
-// You can leave some fields optional if you are not using them yet on the frontend.
 type DormType = {
   _id: string;
   title: string;
@@ -46,8 +45,25 @@ type DormType = {
   tour3DUrl?: string;
 };
 
+// Response shape from /api/dorms/[id]
+type DormApiResponse = {
+  dorm: DormType;
+  isOccupiedNow?: boolean;
+  occupiedUntil?: string | null;
+};
+
+type MyDormBookingResponse = {
+  hasBooking: boolean;
+  booking?: {
+    status: string;
+    startDate: string;
+    endDate: string;
+  };
+} | null;
+
 export default function RoomDetailsPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
 
   // useParams can return string | string[] | undefined
   const rawId = params?.id;
@@ -57,6 +73,14 @@ export default function RoomDetailsPage() {
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Availability flags from /api/dorms/[id]
+  const [isOccupiedNow, setIsOccupiedNow] = useState<boolean>(false);
+  const [occupiedUntil, setOccupiedUntil] = useState<string | null>(null);
+
+  // ✅ New: does the current client already have a booking for this room?
+  const [hasMyBooking, setHasMyBooking] = useState<boolean>(false);
+  const [myBookingStatus, setMyBookingStatus] = useState<string | null>(null);
 
   // Load dorm data by id
   useEffect(() => {
@@ -75,14 +99,14 @@ export default function RoomDetailsPage() {
           throw new Error("Failed to load dorm");
         }
 
-        const data = await res.json();
+        const data: DormApiResponse = await res.json();
         if (!cancelled) {
           setDorm(data.dorm);
 
+          setIsOccupiedNow(!!data.isOccupiedNow);
+          setOccupiedUntil(data.occupiedUntil ?? null);
+
           // Set initial active image:
-          // 1) profileImg
-          // 2) first image from images[]
-          // 3) fallback template image
           const firstImage =
             data.dorm?.profileImg ||
             (data.dorm?.images && data.dorm.images[0]) ||
@@ -109,6 +133,45 @@ export default function RoomDetailsPage() {
     };
   }, [id]);
 
+  // ✅ New: check if the current client already has a booking for this dorm
+  useEffect(() => {
+    if (!id) return;
+
+    let cancelled = false;
+
+    async function checkMyBooking() {
+      try {
+        const res = await fetch(`/api/bookings/my-dorm?dormId=${id}`, {
+          cache: "no-store",
+        });
+
+        if (!res.ok) {
+          // If unauthorized or any error, just ignore and assume no booking
+          return;
+        }
+
+        const data: MyDormBookingResponse = await res.json();
+        if (cancelled || !data) return;
+
+        if (data.hasBooking) {
+          setHasMyBooking(true);
+          setMyBookingStatus(data.booking?.status ?? null);
+        } else {
+          setHasMyBooking(false);
+          setMyBookingStatus(null);
+        }
+      } catch (err) {
+        console.error("Error checking my booking for this dorm:", err);
+      }
+    }
+
+    checkMyBooking();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
   const currency = dorm?.depositCurrency || "USD";
 
   // Helper to format date strings (like availableFrom)
@@ -117,6 +180,14 @@ export default function RoomDetailsPage() {
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return null;
     return d.toLocaleDateString();
+  };
+
+  const occupiedUntilDate =
+    occupiedUntil != null ? new Date(occupiedUntil) : null;
+
+  const handleBookClick = () => {
+    if (!dorm?._id || isOccupiedNow || hasMyBooking) return;
+    router.push(`/room/request/${dorm._id}`);
   };
 
   return (
@@ -367,13 +438,37 @@ export default function RoomDetailsPage() {
                       </div>
                     )}
 
-                    {/* Booking button */}
-                    <Link
-                      href={`/room/request/${dorm._id}`}
-                      className="btn btn-primary mt-4"
-                    >
-                      Book this room
-                    </Link>
+                    {/* ✅ Booking section with occupancy + my booking check */}
+                    <div className="mt-4">
+                      {hasMyBooking ? (
+                        <p className="text-warning fw-bold">
+                          You already have a booking for this room
+                          {myBookingStatus ? ` (${myBookingStatus})` : ""}.
+                        </p>
+                      ) : isOccupiedNow && occupiedUntilDate ? (
+                        <p className="text-danger fw-bold">
+                          Occupied until{" "}
+                          {occupiedUntilDate.toLocaleDateString(undefined, {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </p>
+                      ) : !isOccupiedNow ? (
+                        <p className="text-success fw-bold">
+                          This room is available
+                        </p>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        disabled={isOccupiedNow || hasMyBooking}
+                        onClick={handleBookClick}
+                      >
+                        Book this room
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -1,13 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
- 
+
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import TemplateHeader from "@/app/components/TemplateHeader";
-import TemplateFooter from "@/app/components/TemplateFooter";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -40,11 +38,16 @@ export default function RoomRequestPage() {
   const [dorm, setDorm] = useState<DormType | null>(null);
   const [loadingDorm, setLoadingDorm] = useState(true);
 
-  // Booking form state
+  // Booking form state (MONTHLY ONLY)
   const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
-  const [days, setDays] = useState<number>(0);
+  const [months, setMonths] = useState<number>(1); // 1–3 months
+  const [endDatePreview, setEndDatePreview] = useState<Date | null>(null);
   const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
+
+  // Client info
+  const [firstName, setFirstName] = useState<string>("");
+  const [lastName, setLastName] = useState<string>("");
+  const [phone, setPhone] = useState<string>("");
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -184,57 +187,28 @@ export default function RoomRequestPage() {
     };
   }, [id]);
 
-  // 🔹 Compute days and estimated price whenever dates or dorm change
+  // 🔹 Compute endDate preview + estimated monthly price
   useEffect(() => {
-    if (!startDate || !endDate) {
-      setDays(0);
+    if (!startDate || !dorm || !dorm.pricePerMonth) {
+      setEndDatePreview(null);
       setEstimatedPrice(null);
       return;
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    // Compute end date = start date + months
+    const end = new Date(startDate);
+    end.setMonth(end.getMonth() + months);
+    setEndDatePreview(end);
 
-    const diffMs = end.getTime() - start.getTime();
-    const msPerDay = 1000 * 60 * 60 * 24;
-    const d = Math.ceil(diffMs / msPerDay);
-
-    if (isNaN(d) || d <= 0) {
-      setDays(0);
-      setEstimatedPrice(null);
-      return;
-    }
-
-    setDays(d);
-
-    if (!dorm) {
-      setEstimatedPrice(null);
-      return;
-    }
-
-    let total = 0;
-
-    // Simple pricing logic: monthly > weekly > daily
-    if (dorm.pricePerMonth && d >= 28) {
-      const months = Math.ceil(d / 30);
-      total = months * dorm.pricePerMonth;
-    } else if (dorm.pricePerWeek && d >= 7) {
-      const weeks = Math.ceil(d / 7);
-      total = weeks * dorm.pricePerWeek;
-    } else if (dorm.pricePerNight) {
-      total = d * dorm.pricePerNight;
-    } else {
-      total = 0;
-    }
-
+    // Monthly pricing only
+    const total = dorm.pricePerMonth * months;
     setEstimatedPrice(total);
-  }, [startDate, endDate, dorm]);
+  }, [startDate, months, dorm]);
 
-  // 🔹 Submit booking request
+  // 🔹 Submit booking request (MONTHLY)
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
-    // ✅ Extra guard: if already submitting, ignore further clicks
     if (submitting) return;
 
     setError(null);
@@ -245,19 +219,32 @@ export default function RoomRequestPage() {
       return;
     }
 
-    if (!startDate || !endDate) {
-      setError("Please select start and end dates.");
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+    const trimmedPhone = phone.trim();
+
+    if (!trimmedFirstName || !trimmedLastName || !trimmedPhone) {
+      setError("Please fill in your first name, last name, and phone number.");
       return;
     }
 
-    // Prevent selecting a start date in the past
+    if (!startDate) {
+      setError("Please select a start date.");
+      return;
+    }
+
     if (startDate < today) {
       setError("Start date cannot be in the past.");
       return;
     }
 
-    if (endDate <= startDate) {
-      setError("End date must be after start date.");
+    if (months < 1 || months > 3) {
+      setError("Please select between 1 and 3 months.");
+      return;
+    }
+
+    if (!dorm?.pricePerMonth) {
+      setError("Monthly price is not available for this dorm.");
       return;
     }
 
@@ -270,7 +257,10 @@ export default function RoomRequestPage() {
         body: JSON.stringify({
           dormId: id,
           startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
+          months,
+          firstName: trimmedFirstName,
+          lastName: trimmedLastName,
+          phone: trimmedPhone,
         }),
       });
 
@@ -281,40 +271,31 @@ export default function RoomRequestPage() {
       }
 
       setSuccess("Booking request sent successfully! ✅");
-
-      // ✅ After successful booking, redirect client to /room
       router.push("/room");
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Something went wrong.");
-      setSubmitting(false); // allow retry if there was an error
+      setSubmitting(false);
       return;
     }
 
-    // Note: if we reached here (success + redirect),
-    // the component will unmount because of navigation,
-    // so we don't really need to reset submitting. But it's safe:
     setSubmitting(false);
   }
 
   if (checkingAuth) {
     return (
       <div className="main-layout">
-        <TemplateHeader />
         <div className="our_room">
           <div className="container">
             <p>Checking authentication...</p>
           </div>
         </div>
-        <TemplateFooter />
       </div>
     );
   }
 
   return (
     <div className="main-layout">
-      <TemplateHeader />
-
       {/* PAGE TITLE */}
       <div className="back_re">
         <div className="container">
@@ -344,18 +325,27 @@ export default function RoomRequestPage() {
               <div className="col-md-12">
                 <h3>Request to Book: {dorm.title}</h3>
                 <p>
-                  Daily:{" "}
-                  {dorm.pricePerNight != null
-                    ? `${dorm.pricePerNight} ${currency}`
-                    : "N/A"}{" "}
-                  | Weekly:{" "}
-                  {dorm.pricePerWeek != null
-                    ? `${dorm.pricePerWeek} ${currency}`
-                    : "N/A"}{" "}
-                  | Monthly:{" "}
+                  Monthly:{" "}
                   {dorm.pricePerMonth != null
-                    ? `${dorm.pricePerMonth} ${currency}`
+                    ? `${dorm.pricePerMonth} ${currency} / month`
                     : "N/A"}
+                  {"  "}
+                  {dorm.pricePerNight != null && (
+                    <>
+                      <br />
+                      <small className="text-muted">
+                        Daily: {dorm.pricePerNight} {currency}
+                      </small>
+                    </>
+                  )}
+                  {dorm.pricePerWeek != null && (
+                    <>
+                      <br />
+                      <small className="text-muted">
+                        Weekly: {dorm.pricePerWeek} {currency}
+                      </small>
+                    </>
+                  )}
                 </p>
               </div>
             </div>
@@ -365,24 +355,54 @@ export default function RoomRequestPage() {
             <div className="row mt-3">
               <div className="col-md-8">
                 <form onSubmit={handleSubmit}>
-                  {/* Start date picker */}
+                  {/* Client info */}
+                  <div className="form-group mb-3">
+                    <label htmlFor="firstName">First Name</label>
+                    <input
+                      id="firstName"
+                      type="text"
+                      className="form-control"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="Enter your first name"
+                    />
+                  </div>
+
+                  <div className="form-group mb-3">
+                    <label htmlFor="lastName">Last Name</label>
+                    <input
+                      id="lastName"
+                      type="text"
+                      className="form-control"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="Enter your last name"
+                    />
+                  </div>
+
+                  <div className="form-group mb-3">
+                    <label htmlFor="phone">Phone Number</label>
+                    <input
+                      id="phone"
+                      type="tel"
+                      className="form-control"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Enter your phone number"
+                    />
+                  </div>
+
+                  {/* Start date picker (single date) */}
                   <div className="form-group mb-3">
                     <label htmlFor="startDate">Start Date</label>
                     <DatePicker
                       id="startDate"
                       selected={startDate}
-                      onChange={(date) => {
-                        setStartDate(date);
-                        // Reset end date if it is before the new start date
-                        if (date && endDate && endDate <= date) {
-                          setEndDate(null);
-                        }
-                      }}
+                      onChange={(date) => setStartDate(date)}
                       minDate={today}
                       excludeDateIntervals={blockedIntervals}
                       selectsStart
                       startDate={startDate}
-                      endDate={endDate}
                       dateFormat="yyyy-MM-dd"
                       className="form-control"
                       placeholderText="Select start date"
@@ -390,28 +410,45 @@ export default function RoomRequestPage() {
                     />
                   </div>
 
-                  {/* End date picker */}
+                  {/* Months dropdown */}
                   <div className="form-group mb-3">
-                    <label htmlFor="endDate">End Date</label>
-                    <DatePicker
-                      id="endDate"
-                      selected={endDate}
-                      onChange={(date) => setEndDate(date)}
-                      minDate={startDate || today}
-                      excludeDateIntervals={blockedIntervals}
-                      selectsEnd
-                      startDate={startDate}
-                      endDate={endDate}
-                      dateFormat="yyyy-MM-dd"
+                    <label htmlFor="months">Duration (months)</label>
+                    <select
+                      id="months"
                       className="form-control"
-                      placeholderText="Select end date"
-                      wrapperClassName="w-100"
-                    />
+                      value={months}
+                      onChange={(e) => setMonths(Number(e.target.value))}
+                    >
+                      <option value={1}>1 month</option>
+                      <option value={2}>2 months</option>
+                      <option value={3}>3 months</option>
+                    </select>
                   </div>
 
-                  {days > 0 && (
+                  {/* Preview of end date + price */}
+                  {startDate && endDatePreview && (
                     <p>
-                      Duration: <strong>{days}</strong> day(s)
+                      Duration:{" "}
+                      <strong>
+                        {months} month{months > 1 ? "s" : ""}
+                      </strong>{" "}
+                      <br />
+                      From{" "}
+                      <strong>
+                        {startDate.toLocaleDateString(undefined, {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </strong>{" "}
+                      to{" "}
+                      <strong>
+                        {endDatePreview.toLocaleDateString(undefined, {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </strong>
                     </p>
                   )}
 
@@ -466,8 +503,6 @@ export default function RoomRequestPage() {
           )}
         </div>
       </div>
-
-      <TemplateFooter />
     </div>
   );
 }

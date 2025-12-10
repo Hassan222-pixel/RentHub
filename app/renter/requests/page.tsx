@@ -14,11 +14,14 @@ interface RequestBooking {
     name: string;
     email: string;
   };
+  clientFirstName?: string;
+  clientLastName?: string;
+  clientPhone?: string;
   startDate: string;
   endDate: string;
   totalPrice: number;
   status: string;
-  hasConflict?: boolean; // added by the API when another confirmed booking overlaps
+  hasConflict?: boolean; // set by API based on capacity & confirmed bookings
 }
 
 export default function RenterRequestsPage() {
@@ -79,6 +82,22 @@ export default function RenterRequestsPage() {
     }
   }
 
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+
+  const getMonthsBetween = (startIso: string, endIso: string) => {
+    const start = new Date(startIso);
+    const end = new Date(endIso);
+    const months =
+      (end.getFullYear() - start.getFullYear()) * 12 +
+      (end.getMonth() - start.getMonth());
+    return months > 0 ? months : 1;
+  };
+
   return (
     <div>
       <h2 className="mb-3">Requests</h2>
@@ -111,74 +130,97 @@ export default function RenterRequestsPage() {
               </tr>
             </thead>
             <tbody>
-              {requests.map((r) => (
-                <tr key={r._id}>
-                  <td>
-                    <strong>{r.dorm?.title}</strong>
-                    {r.dorm?.city && (
-                      <>
-                        <br />
-                        <small className="text-muted">{r.dorm.city}</small>
-                      </>
-                    )}
-                  </td>
-                  <td>
-                    {r.client?.name}
-                    <br />
-                    <small className="text-muted">{r.client?.email}</small>
-                  </td>
-                  <td>
-                    {new Date(r.startDate).toLocaleDateString()} –{" "}
-                    {new Date(r.endDate).toLocaleDateString()}
-                  </td>
-                  <td>${r.totalPrice}</td>
-                  <td>
-                    <div className="d-flex flex-wrap gap-2">
-                      {/* If this request conflicts with an already confirmed booking */}
-                      {r.hasConflict ? (
+              {requests.map((r) => {
+                const months = getMonthsBetween(r.startDate, r.endDate);
+                const displayName =
+                  r.clientFirstName || r.clientLastName
+                    ? `${r.clientFirstName || ""} ${
+                        r.clientLastName || ""
+                      }`.trim()
+                    : r.client?.name;
+
+                return (
+                  <tr key={r._id}>
+                    <td>
+                      <strong>{r.dorm?.title}</strong>
+                      {r.dorm?.city && (
                         <>
-                          {/* Accept is visibly disabled when there is a conflict */}
-                          <button
-                            className="btn btn-sm btn-success"
-                            disabled
-                            title="This room is already confirmed for these dates"
-                          >
-                            Accept
-                          </button>
-                          {/* Button to mark the request as conflict/spam (cancels with specific reason) */}
-                          <button
-                            className="btn btn-sm btn-warning"
-                            disabled={actionLoadingId === r._id}
-                            onClick={() => handleAction(r._id, "spam")}
-                          >
-                            {actionLoadingId === r._id
-                              ? "Saving..."
-                              : "Mark as conflict"}
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          {/* Normal Accept / Reject buttons when no conflict */}
-                          <button
-                            className="btn btn-sm btn-success"
-                            disabled={actionLoadingId === r._id}
-                            onClick={() => handleAction(r._id, "confirm")}
-                          >
-                            {actionLoadingId === r._id ? "Saving..." : "Accept"}
-                          </button>
-                          <button
-                            className="btn btn-sm btn-outline-danger"
-                            disabled={actionLoadingId === r._id}
-                            onClick={() => handleAction(r._id, "cancel")}
-                          >
-                            {actionLoadingId === r._id ? "Saving..." : "Reject"}
-                          </button>
+                          <br />
+                          <small className="text-muted">{r.dorm.city}</small>
                         </>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td>
+                      {displayName}
+                      <br />
+                      {r.clientPhone && (
+                        <>
+                          <small className="text-muted d-block">
+                            {r.clientPhone}
+                          </small>
+                        </>
+                      )}
+                      <small className="text-muted d-block">
+                        {r.client?.email}
+                      </small>
+                    </td>
+                    <td>
+                      {formatDate(r.startDate)} – {formatDate(r.endDate)}
+                      <br />
+                      <small className="text-muted">
+                        {months} month{months > 1 ? "s" : ""}
+                      </small>
+                    </td>
+                    <td>${r.totalPrice}</td>
+                    <td>
+                      <div className="d-flex flex-wrap gap-2">
+                        {r.hasConflict ? (
+                          <>
+                            {/* Accept is disabled when this request exceeds capacity */}
+                            <button
+                              className="btn btn-sm btn-success"
+                              disabled
+                              title="This room is already fully booked for these dates"
+                            >
+                              Accept
+                            </button>
+                            <button
+                              className="btn btn-sm btn-warning"
+                              disabled={actionLoadingId === r._id}
+                              onClick={() => handleAction(r._id, "spam")}
+                            >
+                              {actionLoadingId === r._id
+                                ? "Saving..."
+                                : "Mark as conflict"}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              className="btn btn-sm btn-success"
+                              disabled={actionLoadingId === r._id}
+                              onClick={() => handleAction(r._id, "confirm")}
+                            >
+                              {actionLoadingId === r._id
+                                ? "Saving..."
+                                : "Accept"}
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              disabled={actionLoadingId === r._id}
+                              onClick={() => handleAction(r._id, "cancel")}
+                            >
+                              {actionLoadingId === r._id
+                                ? "Saving..."
+                                : "Reject"}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
