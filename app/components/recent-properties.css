@@ -98,3 +98,10 @@
   background: #1f74ff;
   color: #fff;
 }
+
+
+.property-link-wrapper {
+  text-decoration: none;
+  color: inherit;
+}
+

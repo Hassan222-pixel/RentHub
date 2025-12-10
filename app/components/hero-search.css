@@ -1,25 +1,93 @@
 .search-box-full {
   background: #fff;
-  width: 900px;
-  padding: 16px;
-  border-radius: 40px;
+  width: 100%;
+  max-width: 1200px;   /* ✅ BIGGER CONTAINER */
+  padding: 20px 24px;
+  border-radius: 50px;
   display: flex;
-  gap: 16px;
+  align-items: center;
+  gap: 18px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
 }
 
+/* === INPUT SIZING CONTROL === */
 .search-box-full select {
-  flex: 1;
-  padding: 12px;
-  border: 1px solid #eee;
-  border-radius: 8px;
+  min-width: 180px;   /* ✅ FIXED WIDTH FOR ALL SELECTS */
 }
 
+.date-wrapper {
+  min-width: 260px;   /* ✅ FIXED WIDTH FOR DATE PICKER */
+  display: flex;
+}
+
+/* shared style */
+.search-box-full select,
+.search-box-full .datepicker-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  background-color: #fff;
+  color: #333;
+}
+
+/* ensure date input always stretches */
+.date-wrapper .datepicker-input {
+  width: 100%;
+}
+
+/* focus effect */
+.search-box-full select:focus,
+.search-box-full .datepicker-input:focus {
+  border-color: #1f74ff;
+}
+
+/* === BUTTONS === */
 .search-btn {
-  padding: 12px 28px;
-  background: linear-gradient(90deg, #00ff87, #00a3ff);
-  color: white;
-  font-weight: 600;
+  padding: 14px 26px;
   border-radius: 30px;
   border: none;
+  font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+/* SEARCH */
+.search-btn:not(.clear-btn) {
+  background: linear-gradient(90deg, #00ff87, #00a3ff);
+  color: #fff;
+}
+
+/* CLEAR */
+.clear-btn {
+  background: #f1f1f1;
+  color: #333;
+}
+
+/* hover */
+.search-btn:not(.clear-btn):hover {
+  filter: brightness(1.05);
+}
+
+.clear-btn:hover {
+  background: #e2e2e2;
+}
+
+/* === MOBILE FIX === */
+@media (max-width: 992px) {
+  .search-box-full {
+    flex-wrap: wrap;
+    border-radius: 24px;
+    justify-content: center;
+  }
+
+  .search-box-full select,
+  .date-wrapper,
+  .search-btn {
+    width: 100%;
+    min-width: 100%;
+  }
 }

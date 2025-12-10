@@ -1,14 +1,17 @@
+import Link from "next/link";
 import "./recent-properties.css";
 
-type Property = {
+export type PropertyCard = {
+  id?: string;
   title: string;
   city: string;
   price: string;
   badge?: string;
   image: string;
+  href?: string; // optional link to details page
 };
 
-const properties: Property[] = [
+const defaultProperties: PropertyCard[] = [
   {
     title: "Modern apartment",
     city: "Los Angeles, CA",
@@ -32,37 +35,74 @@ const properties: Property[] = [
   },
 ];
 
-export default function RecentProperties() {
+type Props = {
+  properties?: PropertyCard[];
+  title?: string;
+  subtitle?: string;
+  showButton?: boolean;
+};
+
+export default function RecentProperties({
+  properties,
+  title,
+  subtitle,
+  showButton = true,
+}: Props) {
+  const list = properties && properties.length > 0 ? properties : defaultProperties;
+
   return (
     <section className="recent-section">
       <div className="recent-container">
         <div className="recent-header">
-          <h2>Recent Properties</h2>
-          <p>Find your dream home from our recently added listings.</p>
+          <h2>{title ?? "Recent Properties"}</h2>
+          <p>
+            {subtitle ??
+              "Find your dream home from our recently added listings."}
+          </p>
         </div>
 
         <div className="recent-grid">
-          {properties.map((p, index) => (
-            <div key={index} className="property-card">
-              <div
-                className="property-image"
-                style={{ backgroundImage: `url(${p.image})` }}
+          {list.map((p, index) => {
+            const card = (
+              <div className="property-card">
+                <div
+                  className="property-image"
+                  style={{ backgroundImage: `url(${p.image})` }}
+                >
+                  {p.badge && (
+                    <span className="property-badge">{p.badge}</span>
+                  )}
+                </div>
+
+                <div className="property-info">
+                  <h3>{p.title}</h3>
+                  <p className="property-city">{p.city}</p>
+                  <p className="property-price">{p.price}</p>
+                </div>
+              </div>
+            );
+
+            const key = p.id ?? index;
+
+            return p.href ? (
+              <Link
+                key={key}
+                href={p.href}
+                className="property-link-wrapper"
               >
-                {p.badge && <span className="property-badge">{p.badge}</span>}
-              </div>
-
-              <div className="property-info">
-                <h3>{p.title}</h3>
-                <p className="property-city">{p.city}</p>
-                <p className="property-price">{p.price}</p>
-              </div>
-            </div>
-          ))}
+                {card}
+              </Link>
+            ) : (
+              <div key={key}>{card}</div>
+            );
+          })}
         </div>
 
-        <div className="recent-footer">
-          <button className="see-more-btn">SEE MORE</button>
-        </div>
+        {showButton && (
+          <div className="recent-footer">
+            <button className="see-more-btn">SEE MORE</button>
+          </div>
+        )}
       </div>
     </section>
   );

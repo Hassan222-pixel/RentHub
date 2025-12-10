@@ -2,9 +2,10 @@
   width: 100%;
   background: #1f74ff;
   padding: 15px 0;
-  position: sticky;
+  position: sticky; /* you can switch to fixed if you prefer */
   top: 0;
   z-index: 100;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 .nav-container {
@@ -50,4 +51,22 @@
 
 .call-btn:hover {
   background: #e5e5e5;
+}
+
+.navbar.navbar--hidden {
+  transform: translateY(-100%);
+}
+
+.navbar:not(.navbar--hidden) {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+
+.navbar.navbar--hidden {
+  transform: translateY(-100%);
+}
+
+/* optional little shadow when visible */
+.navbar:not(.navbar--hidden) {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }

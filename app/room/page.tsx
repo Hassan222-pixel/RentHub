@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
 
-import TemplateHeader from "@/app/components/TemplateHeader";
-import TemplateFooter from "@/app/components/TemplateFooter";
-import { connectToDatabase } from "@/lib/mongodb";
-import { Dorm } from "@/models/Dorm";
-import RoomFilterList from "./RoomFilterList";
+import { useEffect, useState } from "react";
+import HeroSearch from "../components/Herosearch";
+import RecentProperties, {
+  type PropertyCard,
+} from "../components/RecentProperties";
 
 export type DormListItem = {
   _id: string;
@@ -19,62 +20,118 @@ export type DormListItem = {
   pricePerMonth?: number | null;
 };
 
-export default async function RoomPage() {
-  await connectToDatabase();
+function formatPrice(d: DormListItem): string {
+  if (d.pricePerMonth != null) {
+    return `$${d.pricePerMonth.toLocaleString()} / month`;
+  }
+  if (d.pricePerWeek != null) {
+    return `$${d.pricePerWeek.toLocaleString()} / week`;
+  }
+  if (d.pricePerNight != null) {
+    return `$${d.pricePerNight.toLocaleString()} / night`;
+  }
+  return "Contact for price";
+}
 
-  const dormDocs = await Dorm.find({ isActive: true })
-    .sort({ createdAt: -1 })
-    .select(
-      "title description profileImg roomType city university pricePerNight pricePerWeek pricePerMonth"
-    )
-    .lean();
+export default function RoomPage() {
+  const [dorms, setDorms] = useState<DormListItem[]>([]);
+  const [filteredDorms, setFilteredDorms] = useState<DormListItem[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
+  const [universities, setUniversities] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const dorms: DormListItem[] = dormDocs.map((d: any) => ({
-    _id: d._id.toString(),
+  // Load dorms & universities on first render
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // 1) Load dorms
+        const dormRes = await fetch("/api/dorms", { cache: "no-store" });
+        const dormData = await dormRes.json();
+        const dormList: DormListItem[] = dormData.dorms || [];
+
+        setDorms(dormList);
+        setFilteredDorms(dormList);
+
+        // derive cities from dorms
+        const uniqueCities = [
+          ...new Set(dormList.map((d) => d.city).filter(Boolean) as string[]),
+        ];
+        setCities(uniqueCities);
+
+        // 2) Load universities (from API)
+        const uniRes = await fetch("/api/universities", {
+          cache: "no-store",
+        });
+        if (uniRes.ok) {
+          const uniData = await uniRes.json();
+          const uniNames: string[] = (uniData.universities || []).map(
+            (u: any) => u.name as string
+          );
+          setUniversities(uniNames);
+        } else {
+          setUniversities([]);
+        }
+      } catch (err) {
+        console.error("Failed to load room data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Build cards for RecentProperties based on filtered dorms
+  const cards: PropertyCard[] = filteredDorms.map((d) => ({
+    id: d._id,
     title: d.title,
-    description: d.description,
-    profileImg: d.profileImg || null,
-    roomType: d.roomType || null,
-    city: d.city || "",
-    university: d.university || "",
-    pricePerNight: d.pricePerNight ?? null,
-    pricePerWeek: d.pricePerWeek ?? null,
-    pricePerMonth: d.pricePerMonth ?? null,
+    city: [d.city, d.university].filter(Boolean).join(" · ") || "Unknown",
+    price: formatPrice(d),
+    badge: d.roomType ? d.roomType.toUpperCase() : undefined,
+    image:
+      d.profileImg ||
+      "https://images.unsplash.com/photo-1523217582562-09d0def993a6",
+    href: `/room-details/${d._id}`,
   }));
-
-  // ⭐ Extract unique cities
-  const uniqueCities = [...new Set(dorms.map((d) => d.city).filter(Boolean))];
-
-  // ⭐ Extract unique universities
-  const uniqueUniversities = [...new Set(dorms.map((d) => d.university).filter(Boolean))];
 
   return (
     <div className="main-layout">
-      <TemplateHeader />
-
-      {/* PAGE TITLE */}
-      <div className="back_re">
+      {/* HERO + SEARCH */}
+      <section className="our_room">
         <div className="container">
-          <div className="row">
-            <div className="col-md-12">
-              <div className="title">
-                <h2>Our Rooms</h2>
-              </div>
-            </div>
+          <div className="titlepage text-center mb-4">
+            <h2>Find a Room</h2>
+            <p>Search and browse available rooms near your university.</p>
           </div>
-        </div>
-      </div>
 
-      {/* ROOM SECTION */}
-      <div className="our_room">
-        <div className="container">
-          <RoomFilterList initialDorms={dorms} />
-        </div>
-      </div>
+          <div className="d-flex justify-content-center mb-4">
+            {!loading && (
+              <HeroSearch
+                cities={cities}
+                universities={universities}
+                initialDorms={dorms}
+                onResults={(filtered) => setFilteredDorms(filtered)}
+              />
+            )}
+          </div>
 
-      {/* ============================= */}
-      {/* ⭐ OUR CITIES SECTION */}
-      {/* ============================= */}
+          {loading && (
+            <p className="text-center" style={{ marginTop: "10px" }}>
+              Loading rooms...
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* ROOMS LIST USING RecentProperties DESIGN */}
+      <RecentProperties
+        properties={cards}
+        title="Available rooms"
+        subtitle="Browse all currently active rooms from our renters."
+        showButton={false}
+      />
+
+      {/* OUR CITIES SECTION */}
       <div className="our_room" style={{ marginTop: "70px" }}>
         <div className="container">
           <div className="titlepage text-center mb-4">
@@ -83,7 +140,7 @@ export default async function RoomPage() {
           </div>
 
           <div className="row">
-            {uniqueCities.map((city) => (
+            {cities.map((city) => (
               <div key={city} className="col-md-4 col-sm-6 mb-4">
                 <div className="room city_card">
                   <div className="bed_room text-center p-4">
@@ -97,16 +154,14 @@ export default async function RoomPage() {
               </div>
             ))}
 
-            {uniqueCities.length === 0 && (
+            {cities.length === 0 && !loading && (
               <p className="text-center w-100">No cities available yet.</p>
             )}
           </div>
         </div>
       </div>
 
-      {/* ============================= */}
-      {/* ⭐ OUR UNIVERSITIES SECTION */}
-      {/* ============================= */}
+      {/* OUR UNIVERSITIES SECTION */}
       <div className="our_room" style={{ marginTop: "70px" }}>
         <div className="container">
           <div className="titlepage text-center mb-4">
@@ -115,7 +170,7 @@ export default async function RoomPage() {
           </div>
 
           <div className="row">
-            {uniqueUniversities.map((univ) => (
+            {universities.map((univ) => (
               <div key={univ} className="col-md-4 col-sm-6 mb-4">
                 <div className="room city_card">
                   <div className="bed_room text-center p-4">
@@ -129,14 +184,14 @@ export default async function RoomPage() {
               </div>
             ))}
 
-            {uniqueUniversities.length === 0 && (
-              <p className="text-center w-100">No universities available yet.</p>
+            {universities.length === 0 && !loading && (
+              <p className="text-center w-100">
+                No universities available yet.
+              </p>
             )}
           </div>
         </div>
       </div>
-
-      <TemplateFooter />
     </div>
   );
 }

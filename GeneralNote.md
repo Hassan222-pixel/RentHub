@@ -5,29 +5,37 @@ RentHub/
 │   ├── globals.css                              ← Global CSS (Bootstrap overrides, theme, dashboard styles)
 │   │
 │   ├── about/
-│   │   └── page.tsx                             ← Public "About" page (info about RentHub)
+│   │   ├── page.tsx                             ← Public "About" page (info about RentHub)
+│   │   └── about.css                            ← Styles for About page
 │   │
 │   ├── blog/
 │   │   └── page.tsx                             ← Public blog/news page (articles, updates, housing tips)
 │   │
 │   ├── contact/
-│   │   └── page.tsx                             ← Public "Contact" page (contact form + contact info)
+│   │   ├── page.tsx                             ← Public "Contact" page (contact form + contact info)
+│   │   └── contact.css                          ← Styles for Contact page
 │   │
 │   ├── gallery/
 │   │   └── page.tsx                             ← Public gallery page (photos / dorm showcase)
 │   │
+│   ├── news/
+│   │   ├── page.tsx                             ← Public news page (consuming /api/blog or similar)
+│   │   └── news.css                             ← Styles for news page
+│   │
+│   ├── properties/
+│   │   ├── page.tsx                             ← Public properties listing page
+│   │   └── properties.css                       ← Styles for properties page
+│   │
 │   ├── room/
 │   │   ├── page.tsx                             ← Public rooms listing page (loads active dorms on server and renders modern filter + list via RoomFilterList)
-│   │   └── RoomFilterList.tsx                   ← Client-side filter UI for rooms (search input, date range picker, room type select, conflict alerts with dismiss "X")
+│   │   ├── RoomFilterList.tsx                   ← Client-side filter UI for rooms (search input, date range picker, room type select, conflict alerts with dismiss "X")
+│   │   └── request/
+│   │       └── [id]/
+│   │           └── page.tsx                     ← Client-only booking request form (react-datepicker calendar, price calculation, disabled booked dates, redirect after submit)
 │   │
 │   ├── room-details/
 │   │   └── [id]/
 │   │       └── page.tsx                         ← Public room details page (full info for a single dorm, main image/gallery, prices, and “Book this room” button)
-│   │
-│   ├── room/
-│   │   └── request/
-│   │       └── [id]/
-│   │           └── page.tsx                     ← Client-only booking request form (react-datepicker calendar, price calculation, disabled booked dates, redirect after submit)
 │   │
 │   ├── client/
 │   │   ├── login/
@@ -37,7 +45,25 @@ RentHub/
 │   │
 │   ├── components/
 │   │   ├── TemplateHeader.tsx                   ← Public-site header (navbar + dynamic login/register or user info depending on auth state)
-│   │   └── TemplateFooter.tsx                   ← Public-site footer (links, copyright, social)
+│   │   ├── TemplateFooter.tsx                   ← Public-site footer (links, copyright, social)
+│   │   ├── LayoutWrapper.tsx                    ← Layout wrapper to compose header/footer around pages
+│   │   ├── Hero.tsx                             ← Hero section component (main landing banner)
+│   │   ├── Herosearch.tsx                       ← Hero search component (search bar in hero)
+│   │   ├── Newsletter.tsx                       ← Newsletter signup component
+│   │   ├── RecentProperties.tsx                 ← Component showing recent properties/cards
+│   │   ├── Testimonials.tsx                     ← Testimonials/Reviews slider or section
+│   │   ├── Cities.tsx                           ← Cities list/grid component
+│   │   ├── universities.tsx                     ← Universities list/grid component
+│   │   │
+│   │   ├── header.css                           ← Styles for TemplateHeader / main header
+│   │   ├── footer.css                           ← Styles for TemplateFooter / main footer
+│   │   ├── hero.css                             ← Styles for Hero component
+│   │   ├── hero-search.css                      ← Styles for Herosearch component
+│   │   ├── newsletter.css                       ← Styles for Newsletter component
+│   │   ├── recent-properties.css                ← Styles for RecentProperties component
+│   │   ├── testimonials.css                     ← Styles for Testimonials component
+│   │   ├── cities.css                           ← Styles for Cities component
+│   │   └── universities.css                     ← Styles for universities component
 │   │
 │   ├── login/
 │   │   └── page.tsx                             ← Admin/Renter login page (redirects based on admin/renter roles)
@@ -92,8 +118,10 @@ RentHub/
 │       │   │   └── route.ts                     ← Returns current user (decoded from JWT in cookies)
 │       │   ├── logout/
 │       │   │   └── route.ts                     ← Clears JWT cookie to log the user out
-│       │   └── register-client/
-│       │       └── route.ts                     ← Registers a new client (User with role "client" + sets JWT)
+│       │   ├── register-client/
+│       │   │   └── route.ts                     ← Registers a new client (User with role "client" + sets JWT)
+│       │   └── seed-super-admin/
+│       │       └── route.ts                     ← One-time route to seed initial super admin user
 │       │
 │       ├── admins/
 │       │   └── route.ts                         ← Super admin route to create/manage system users (admins + renters)
@@ -107,16 +135,25 @@ RentHub/
 │       ├── universities/
 │       │   └── route.ts                         ← Public/authorized: GET list of universities for dropdowns
 │       │
+│       ├── about/
+│       │   └── route.ts                         ← Public: GET About page content (CMS-like)
+│       │
+│       ├── blog/
+│       │   └── route.ts                         ← Public: GET blog/news posts data
+│       │
+│       ├── hero/
+│       │   └── route.ts                         ← Public: GET hero section content (headline, subtitle, background, etc.)
+│       │
 │       ├── upload/
 │       │   └── route.ts                         ← Generic file upload endpoint (images for dorms/universities)
 │       │
 │       ├── dorms/
-│       │   ├── route.ts                     ← Public: GET filtered list of active dorms for /room (supports search roomType)
+│       │   ├── route.ts                         ← Public: GET filtered list of active dorms for /room (supports search roomType)
 │       │   └── [id]/
 │       │       └── route.ts                     ← Public: GET a single dorm by id (for room details / booking form)
 │       │
 │       ├── bookings/
-│       │   ├── route.ts             ← Client-only: GET confirmed bookings for a dorm (by dormId) + POST to create a new pending booking request
+│       │   ├── route.ts                         ← Client-only: GET confirmed bookings for a dorm (by dormId) + POST to create a new pending booking request
 │       │   └── me/
 │       │       └── route.ts                     ← Client-only: GET conflict notifications for this user (used to show red spam/conflict messages on /room)
 │       │
@@ -127,7 +164,7 @@ RentHub/
 │           │       └── route.ts                 ← Renter-only: GET/PUT/DELETE specific listing
 │           │
 │           ├── bookings/
-│           │   ├── route.ts                     ← Renter-only: GET confirmed bookings for this renter (used in renter    bookings page table)
+│           │   ├── route.ts                     ← Renter-only: GET confirmed bookings for this renter (used in renter bookings page table)
 │           │   └── [id]/
 │           │       └── route.ts                 ← Renter-only: DELETE a booking the renter owns (used when deleting bookings from dashboard)
 │           │
@@ -151,7 +188,6 @@ RentHub/
 ├── package.json                                 ← Dependencies + npm scripts
 └── README.md                                    ← Documentation / setup instructions
 
-++++ app/room/request/[id]/page.tsx
 
 
 

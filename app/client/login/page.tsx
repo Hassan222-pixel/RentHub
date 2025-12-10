@@ -7,10 +7,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 export default function ClientLoginPage() {
   const router = useRouter();
 
-  // We read an optional "next" query parameter to know where to redirect after login
-  // Example: /client/login?next=/room/request/123
+  // Optional "next" param: /client/login?next=/room/request/123
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/room";
+  const next = searchParams.get("next"); // ❗ no default here
 
   // Local form state
   const [email, setEmail] = useState("");
@@ -26,7 +25,6 @@ export default function ClientLoginPage() {
         method: "POST",
         body: JSON.stringify({ email, password }),
         headers: { "Content-Type": "application/json" },
-        // Include credentials to make sure cookies are sent/received correctly
         credentials: "include",
       });
 
@@ -38,10 +36,15 @@ export default function ClientLoginPage() {
 
       const data = await res.json();
 
-      // Route based on the user role returned from the backend
       if (data.user.role === "client") {
-        // Normal client → redirect to "next" or /room
-        router.push(next);
+        // ✅ CLIENT: go back to where they came from
+        if (next) {
+          router.replace(next);
+        } else if (typeof window !== "undefined" && window.history.length > 1) {
+          router.back();
+        } else {
+          router.replace("/");
+        }
       } else if (data.user.role === "super-admin") {
         router.push("/dashboard");
       } else if (data.user.role === "renter") {
@@ -93,11 +96,9 @@ export default function ClientLoginPage() {
           Client Login
         </h2>
 
-        {/* Error message if login fails */}
         {error && <div className="alert alert-danger text-center">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          {/* Email field */}
           <div className="mb-3">
             <label className="form-label">Email Address</label>
             <input
@@ -111,7 +112,6 @@ export default function ClientLoginPage() {
             />
           </div>
 
-          {/* Password field */}
           <div className="mb-3">
             <label className="form-label">Password</label>
             <input
@@ -125,7 +125,6 @@ export default function ClientLoginPage() {
             />
           </div>
 
-          {/* Submit button */}
           <button
             type="submit"
             className="btn btn-primary w-100"
@@ -140,7 +139,6 @@ export default function ClientLoginPage() {
           </button>
         </form>
 
-        {/* Link to client registration page */}
         <p
           style={{
             textAlign: "center",
@@ -151,7 +149,6 @@ export default function ClientLoginPage() {
           Don&apos;t have an account? <a href="/client/register">Register</a>
         </p>
 
-        {/* Footer text */}
         <p
           style={{
             textAlign: "center",
