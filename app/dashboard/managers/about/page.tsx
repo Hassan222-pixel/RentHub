@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 interface Stat {
   label: string;
   value: number;
+  icon: string;
 }
 
 interface Realtor {
@@ -44,7 +45,9 @@ export default function AboutManagerPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  // ✅ FIXED — Safe loader that guarantees stats[] and realtors[]
+  /**
+   * ⭐ FIXED LOADER — Ensures no undefined values EVER reach inputs
+   */
   useEffect(() => {
     const load = async () => {
       const res = await fetch("/api/about");
@@ -53,15 +56,28 @@ export default function AboutManagerPage() {
       setAbout({
         bannerTitle: data.bannerTitle ?? "",
         bannerBackgroundImage: data.bannerBackgroundImage ?? "",
+
         aboutTitle: data.aboutTitle ?? "",
         aboutSubtitle: data.aboutSubtitle ?? "",
         aboutParagraph1: data.aboutParagraph1 ?? "",
         aboutParagraph2: data.aboutParagraph2 ?? "",
         aboutImage: data.aboutImage ?? "",
 
-        // FIX: Always ensure arrays exist
-        stats: Array.isArray(data.stats) ? data.stats : [],
-        realtors: Array.isArray(data.realtors) ? data.realtors : [],
+        stats: Array.isArray(data.stats)
+          ? data.stats.map((s: any) => ({
+              label: s.label ?? "",
+              value: Number(s.value ?? 0),
+              icon: s.icon ?? "", // ⭐ Always exists
+            }))
+          : [],
+
+        realtors: Array.isArray(data.realtors)
+          ? data.realtors.map((r: any) => ({
+              name: r.name ?? "",
+              position: r.position ?? "",
+              photo: r.photo ?? "",
+            }))
+          : [],
       });
 
       setLoading(false);
@@ -70,22 +86,28 @@ export default function AboutManagerPage() {
     load();
   }, []);
 
-  const handleField = (field: keyof AboutData, value: any) => {
+  /**
+   * Update helpers
+   */
+  const updateField = (field: keyof AboutData, value: any) => {
     setAbout((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleStat = (index: number, field: keyof Stat, value: any) => {
-    const updated = [...about.stats];
-    updated[index] = { ...updated[index], [field]: value };
-    setAbout((prev) => ({ ...prev, stats: updated }));
+  const updateStat = (index: number, field: keyof Stat, value: any) => {
+    const updatedStats = [...about.stats];
+    updatedStats[index] = { ...updatedStats[index], [field]: value };
+    setAbout((prev) => ({ ...prev, stats: updatedStats }));
   };
 
-  const handleRealtor = (index: number, field: keyof Realtor, value: any) => {
-    const updated = [...about.realtors];
-    updated[index] = { ...updated[index], [field]: value };
-    setAbout((prev) => ({ ...prev, realtors: updated }));
+  const updateRealtor = (index: number, field: keyof Realtor, value: any) => {
+    const updatedRealtors = [...about.realtors];
+    updatedRealtors[index] = { ...updatedRealtors[index], [field]: value };
+    setAbout((prev) => ({ ...prev, realtors: updatedRealtors }));
   };
 
+  /**
+   * Save handler
+   */
   const save = async () => {
     setSaving(true);
     setMessage(null);
@@ -106,7 +128,11 @@ export default function AboutManagerPage() {
     <div className="p-6 max-w-4xl mx-auto space-y-10">
       <h1 className="text-2xl font-bold">About Page Editor</h1>
 
-      {message && <div className="text-green-600">{message}</div>}
+      {message && (
+        <div className={message.includes("Failed") ? "text-red-600" : "text-green-600"}>
+          {message}
+        </div>
+      )}
 
       {/* Banner */}
       <section className="space-y-3">
@@ -116,7 +142,7 @@ export default function AboutManagerPage() {
           type="text"
           className="w-full border p-2"
           value={about.bannerTitle}
-          onChange={(e) => handleField("bannerTitle", e.target.value)}
+          onChange={(e) => updateField("bannerTitle", e.target.value)}
           placeholder="Banner Title"
         />
 
@@ -124,14 +150,12 @@ export default function AboutManagerPage() {
           type="text"
           className="w-full border p-2"
           value={about.bannerBackgroundImage}
-          onChange={(e) =>
-            handleField("bannerBackgroundImage", e.target.value)
-          }
+          onChange={(e) => updateField("bannerBackgroundImage", e.target.value)}
           placeholder="Banner Background Image URL"
         />
       </section>
 
-      {/* About Text */}
+      {/* About Text Section */}
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">About Section</h2>
 
@@ -139,7 +163,7 @@ export default function AboutManagerPage() {
           type="text"
           className="w-full border p-2"
           value={about.aboutTitle}
-          onChange={(e) => handleField("aboutTitle", e.target.value)}
+          onChange={(e) => updateField("aboutTitle", e.target.value)}
           placeholder="About Title"
         />
 
@@ -147,7 +171,7 @@ export default function AboutManagerPage() {
           type="text"
           className="w-full border p-2"
           value={about.aboutSubtitle}
-          onChange={(e) => handleField("aboutSubtitle", e.target.value)}
+          onChange={(e) => updateField("aboutSubtitle", e.target.value)}
           placeholder="About Subtitle"
         />
 
@@ -155,7 +179,7 @@ export default function AboutManagerPage() {
           className="w-full border p-2"
           rows={4}
           value={about.aboutParagraph1}
-          onChange={(e) => handleField("aboutParagraph1", e.target.value)}
+          onChange={(e) => updateField("aboutParagraph1", e.target.value)}
           placeholder="Paragraph 1"
         />
 
@@ -163,7 +187,7 @@ export default function AboutManagerPage() {
           className="w-full border p-2"
           rows={4}
           value={about.aboutParagraph2}
-          onChange={(e) => handleField("aboutParagraph2", e.target.value)}
+          onChange={(e) => updateField("aboutParagraph2", e.target.value)}
           placeholder="Paragraph 2"
         />
 
@@ -171,7 +195,7 @@ export default function AboutManagerPage() {
           type="text"
           className="w-full border p-2"
           value={about.aboutImage}
-          onChange={(e) => handleField("aboutImage", e.target.value)}
+          onChange={(e) => updateField("aboutImage", e.target.value)}
           placeholder="Side Image URL"
         />
       </section>
@@ -186,16 +210,24 @@ export default function AboutManagerPage() {
               type="text"
               className="w-full border p-2"
               value={stat.label}
-              onChange={(e) => handleStat(i, "label", e.target.value)}
-              placeholder="Label"
+              onChange={(e) => updateStat(i, "label", e.target.value)}
+              placeholder="Stat Label"
             />
 
             <input
               type="number"
               className="w-full border p-2"
               value={stat.value}
-              onChange={(e) => handleStat(i, "value", Number(e.target.value))}
-              placeholder="Value"
+              onChange={(e) => updateStat(i, "value", Number(e.target.value))}
+              placeholder="Stat Value"
+            />
+
+            <input
+              type="text"
+              className="w-full border p-2"
+              value={stat.icon}
+              onChange={(e) => updateStat(i, "icon", e.target.value)}
+              placeholder="Stat Icon URL"
             />
 
             <button
@@ -217,7 +249,7 @@ export default function AboutManagerPage() {
           onClick={() =>
             setAbout((prev) => ({
               ...prev,
-              stats: [...prev.stats, { label: "", value: 0 }],
+              stats: [...prev.stats, { label: "", value: 0, icon: "" }],
             }))
           }
         >
@@ -235,7 +267,7 @@ export default function AboutManagerPage() {
               type="text"
               className="w-full border p-2"
               value={r.name}
-              onChange={(e) => handleRealtor(i, "name", e.target.value)}
+              onChange={(e) => updateRealtor(i, "name", e.target.value)}
               placeholder="Name"
             />
 
@@ -243,7 +275,7 @@ export default function AboutManagerPage() {
               type="text"
               className="w-full border p-2"
               value={r.position}
-              onChange={(e) => handleRealtor(i, "position", e.target.value)}
+              onChange={(e) => updateRealtor(i, "position", e.target.value)}
               placeholder="Position"
             />
 
@@ -251,7 +283,7 @@ export default function AboutManagerPage() {
               type="text"
               className="w-full border p-2"
               value={r.photo}
-              onChange={(e) => handleRealtor(i, "photo", e.target.value)}
+              onChange={(e) => updateRealtor(i, "photo", e.target.value)}
               placeholder="Photo URL"
             />
 
@@ -274,10 +306,7 @@ export default function AboutManagerPage() {
           onClick={() =>
             setAbout((prev) => ({
               ...prev,
-              realtors: [
-                ...prev.realtors,
-                { name: "", position: "", photo: "" },
-              ],
+              realtors: [...prev.realtors, { name: "", position: "", photo: "" }],
             }))
           }
         >

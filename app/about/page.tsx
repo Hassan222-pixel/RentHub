@@ -8,6 +8,7 @@ import Newsletter from "../components/Newsletter";
 interface Stat {
   label: string;
   value: number;
+  icon: string;
 }
 
 interface Realtor {
@@ -35,22 +36,57 @@ export default function AboutPage() {
 
   useEffect(() => {
     const load = async () => {
-      const res = await fetch("/api/about");
-      const data = await res.json();
+      try {
+        const res = await fetch("/api/about");
 
-      setAbout({
-        bannerTitle: data.bannerTitle ?? "About",
-        bannerBackgroundImage: data.bannerBackgroundImage ?? "",
+        // Read raw response FIRST
+        const raw = await res.text();
+        console.log("🔍 RAW /api/about RESPONSE:", raw);
 
-        aboutTitle: data.aboutTitle ?? "",
-        aboutSubtitle: data.aboutSubtitle ?? "",
-        aboutParagraph1: data.aboutParagraph1 ?? "",
-        aboutParagraph2: data.aboutParagraph2 ?? "",
-        aboutImage: data.aboutImage ?? "",
+        if (!raw || raw.trim() === "") {
+          console.error("❌ Empty response received from API.");
+          return;
+        }
 
-        stats: Array.isArray(data.stats) ? data.stats : [],
-        realtors: Array.isArray(data.realtors) ? data.realtors : [],
-      });
+        // Safe JSON parse
+        let data: any;
+        try {
+          data = JSON.parse(raw);
+        } catch (err) {
+          console.error("❌ JSON parse failed:", err);
+          return;
+        }
+
+        // Normalize object
+        setAbout({
+          bannerTitle: data.bannerTitle ?? "About",
+          bannerBackgroundImage: data.bannerBackgroundImage ?? "/template/images/banner1.jpg",
+
+          aboutTitle: data.aboutTitle ?? "",
+          aboutSubtitle: data.aboutSubtitle ?? "",
+          aboutParagraph1: data.aboutParagraph1 ?? "",
+          aboutParagraph2: data.aboutParagraph2 ?? "",
+          aboutImage: data.aboutImage ?? "/template/images/about.png",
+
+          stats: Array.isArray(data.stats)
+            ? data.stats.map((s: any) => ({
+                label: s.label ?? "",
+                value: Number(s.value ?? 0),
+                icon: s.icon ?? "", // important
+              }))
+            : [],
+
+          realtors: Array.isArray(data.realtors)
+            ? data.realtors.map((r: any) => ({
+                name: r.name ?? "",
+                position: r.position ?? "",
+                photo: r.photo ?? "",
+              }))
+            : [],
+        });
+      } catch (err) {
+        console.error("❌ Fatal error loading About page:", err);
+      }
     };
 
     load();
@@ -69,32 +105,27 @@ export default function AboutPage() {
         }}
       >
         <div className="about-hero-overlay">
-
           <h1>{about.bannerTitle}</h1>
           <p className="breadcrumb">Home / {about.bannerTitle}</p>
-
           <div className="hero-search-container">
             <HeroSearch />
           </div>
-
         </div>
       </div>
 
-      {/* ABOUT MAIN SECTION */}
+      {/* MAIN ABOUT SECTION */}
       <section className="about-section">
-
-        {/* LEFT TEXT */}
         <div className="about-left">
           <h2>{about.aboutTitle}</h2>
           <p className="subtitle">{about.aboutSubtitle}</p>
-
           <p className="about-text">{about.aboutParagraph1}</p>
           <p className="about-text">{about.aboutParagraph2}</p>
         </div>
 
-        {/* RIGHT IMAGE */}
         <div className="about-right">
-          <img src={about.aboutImage} alt="about image" />
+          {about.aboutImage ? (
+            <img src={about.aboutImage} alt="about section" />
+          ) : null}
         </div>
       </section>
 
@@ -102,8 +133,13 @@ export default function AboutPage() {
       <section className="about-stats">
         {about.stats.map((stat, index) => (
           <div className="stat" key={index}>
-            {/* Keep your static icons OR make them dynamic later */}
-            <img src="https://preview.colorlib.com/theme/bluesky/img/icons/ci-3.png" />
+
+            {/* only show icon if not empty */}
+            {stat.icon ? (
+              <img src={stat.icon} alt={stat.label} />
+            ) : (
+              <div style={{ width: 60, height: 60 }}></div> // placeholder to avoid errors
+            )}
 
             <div>
               <h3>{stat.value}</h3>
@@ -115,13 +151,13 @@ export default function AboutPage() {
 
       {/* TEAM SECTION */}
       <section className="team-section">
-        <h2>The Realtors</h2>
+        <h2>The Team</h2>
         <p className="subtitle">{about.aboutSubtitle}</p>
 
         <div className="team-grid">
           {about.realtors.map((r, i) => (
             <div className="team-card" key={i}>
-              <img src={r.photo} alt={r.name} />
+              {r.photo ? <img src={r.photo} alt={r.name} /> : null}
               <h3>{r.name}</h3>
               <p>{r.position}</p>
               <div className="circle-btn">+</div>
