@@ -1,28 +1,31 @@
-// app/api/news/route.ts
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { News } from "@/models/News";
 
+// 🔥 CRITICAL — disable ALL caching
+export const dynamic = "force-dynamic";
+
+// GET — ALWAYS fetch fresh data
 export async function GET() {
   try {
     await connectToDatabase();
 
-    let news = await News.findOne();
+    const news = await News.findOne().lean();
 
-    if (!news) {
-      news = await News.create({});
-    }
-
-    return NextResponse.json(news, { status: 200 });
+    return NextResponse.json(news ?? {}, {
+      headers: {
+        "Cache-Control": "no-store, max-age=0",
+      },
+    });
   } catch (err) {
-    console.error("GET /api/news error:", err);
     return NextResponse.json(
-      { message: "Failed to load news data" },
+      { message: "Failed to load news" },
       { status: 500 }
     );
   }
 }
 
+// PUT — save from dashboard
 export async function PUT(req: Request) {
   try {
     await connectToDatabase();
@@ -37,11 +40,14 @@ export async function PUT(req: Request) {
       await news.save();
     }
 
-    return NextResponse.json(news, { status: 200 });
+    return NextResponse.json(news, {
+      headers: {
+        "Cache-Control": "no-store, max-age=0",
+      },
+    });
   } catch (err) {
-    console.error("PUT /api/news error:", err);
     return NextResponse.json(
-      { message: "Failed to save news data" },
+      { message: "Failed to save news" },
       { status: 500 }
     );
   }
