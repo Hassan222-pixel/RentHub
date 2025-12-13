@@ -71,13 +71,10 @@ export default function RecentProperties({
                 </div>
 
                 <div className="property-info">
-                  {/* ✅ TITLE + PRICE ON SAME LINE */}
                   <div className="title-price-row">
                     <h3>{p.title}</h3>
                     <span className="property-price-inline">{p.price}</span>
                   </div>
-
-                  {/* ✅ CITY UNDER THEM */}
                   <p className="property-city">{p.city}</p>
                 </div>
 

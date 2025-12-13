@@ -67,14 +67,14 @@ export async function GET(req: NextRequest) {
     const now = new Date();
     const dormIds = dormDocs.map((d) => d._id);
 
-    // All active (current) confirmed bookings for these dorms
+    // All confirmed bookings for these dorms that have not yet ended
+    // (same logic as /api/dorms/[id] for consistency)
     const activeBookings = await Booking.find({
       dorm: { $in: dormIds },
       status: "confirmed",
-      startDate: { $lte: now },
       endDate: { $gt: now },
     })
-      .select("dorm")
+      .select("dorm startDate endDate")
       .lean();
 
     // Count bookings per dorm

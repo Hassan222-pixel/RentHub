@@ -24,7 +24,7 @@ export type DormListItem = {
   isOccupiedNow?: boolean;
   occupiedUntil?: string | null;
 
-  // ✅ NEW: capacity & availableBeds for multi-tenant logic
+  // capacity info
   capacity?: number | null;
   availableBeds?: number | null;
 };
@@ -42,9 +42,8 @@ function formatPrice(d: DormListItem): string {
   return "Contact for price";
 }
 
-// ✅ beds label now uses availableBeds if it exists (for double/shared logic)
+// Uses availableBeds when provided (for double/shared logic)
 function formatBeds(d: DormListItem): string {
-  // If API sends availableBeds, we show how many beds are still free
   if (typeof d.availableBeds === "number") {
     if (d.availableBeds <= 0) {
       return "🛏️ No beds available";
@@ -53,7 +52,7 @@ function formatBeds(d: DormListItem): string {
     return `🛏️ ${d.availableBeds} ${label}`;
   }
 
-  // Fallback to old static logic (in case API does not send availableBeds)
+  // Fallback static logic
   if (d.roomType === "private") {
     return "🛏️ 1 bed";
   }
@@ -86,7 +85,6 @@ export default function RoomPage() {
   const [universities, setUniversities] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load dorms & universities on first render
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -124,16 +122,13 @@ export default function RoomPage() {
     loadData();
   }, []);
 
-  // Build cards for RecentProperties based on filtered dorms
   const cards: PropertyCard[] = filteredDorms.map((d) => {
-    // ✅ If availableBeds is provided, we consider Not available only when <= 0
     const isFullyOccupied =
       typeof d.availableBeds === "number"
         ? d.availableBeds <= 0
         : d.isOccupiedNow === true;
 
     const statusBadge = isFullyOccupied ? "Not available" : "Available";
-
     const cityLine = d.city || "Unknown";
 
     return {
@@ -153,7 +148,6 @@ export default function RoomPage() {
 
   return (
     <div className="main-layout">
-      {/* HERO + SEARCH */}
       <section className="our_room">
         <div className="container">
           <div className="titlepage text-center mb-4">
@@ -180,7 +174,6 @@ export default function RoomPage() {
         </div>
       </section>
 
-      {/* ✅ ROOMS LIST ONLY */}
       <RecentProperties
         properties={cards}
         title="Available rooms"

@@ -10,7 +10,6 @@ type CurrentUser = {
   role: string;
 };
 
-// Helper: compute dorm capacity based on roomType + maxOccupants
 function getDormCapacity(dorm: any): number {
   if (!dorm) return 1;
 
@@ -26,7 +25,6 @@ function getDormCapacity(dorm: any): number {
     return 1;
   }
 
-  // default safety
   return 1;
 }
 
@@ -40,7 +38,6 @@ export async function GET() {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // Load all pending requests for this renter
     const requestDocs = await Booking.find({
       renter: user._id,
       status: "pending",
@@ -49,7 +46,6 @@ export async function GET() {
       .populate("client", "name email")
       .sort({ createdAt: -1 });
 
-    // For each pending request, see if capacity is already fully used
     const requestsWithConflictFlag = await Promise.all(
       requestDocs.map(async (doc) => {
         const obj = doc.toObject();
@@ -123,7 +119,6 @@ export async function PATCH(req: Request) {
     }
 
     if (action === "confirm") {
-      // Before confirming, check capacity for this dorm and this period
       const dormDoc: any = await Dorm.findById(booking.dorm).lean();
       if (!dormDoc || dormDoc.isActive === false) {
         return NextResponse.json(
@@ -155,11 +150,9 @@ export async function PATCH(req: Request) {
       booking.status = "confirmed";
       booking.cancelReason = undefined;
     } else if (action === "cancel") {
-      // Normal rejection
       booking.status = "cancelled";
       booking.cancelReason = "renter_cancelled";
     } else if (action === "spam") {
-      // Mark as conflict / spam for the client
       booking.status = "cancelled";
       booking.cancelReason = "conflict";
     }

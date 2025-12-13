@@ -4,8 +4,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import TemplateHeader from "@/app/components/TemplateHeader";
-import TemplateFooter from "@/app/components/TemplateFooter";
 
 // This type should match (or be compatible with) your Mongoose Dorm model.
 type DormType = {
@@ -78,7 +76,7 @@ export default function RoomDetailsPage() {
   const [isOccupiedNow, setIsOccupiedNow] = useState<boolean>(false);
   const [occupiedUntil, setOccupiedUntil] = useState<string | null>(null);
 
-  // ✅ New: does the current client already have a booking for this room?
+  // does the current client already have a booking for this room?
   const [hasMyBooking, setHasMyBooking] = useState<boolean>(false);
   const [myBookingStatus, setMyBookingStatus] = useState<string | null>(null);
 
@@ -106,7 +104,6 @@ export default function RoomDetailsPage() {
           setIsOccupiedNow(!!data.isOccupiedNow);
           setOccupiedUntil(data.occupiedUntil ?? null);
 
-          // Set initial active image:
           const firstImage =
             data.dorm?.profileImg ||
             (data.dorm?.images && data.dorm.images[0]) ||
@@ -133,7 +130,7 @@ export default function RoomDetailsPage() {
     };
   }, [id]);
 
-  // ✅ New: check if the current client already has a booking for this dorm
+  // check if the current client already has a booking for this dorm
   useEffect(() => {
     if (!id) return;
 
@@ -174,7 +171,6 @@ export default function RoomDetailsPage() {
 
   const currency = dorm?.depositCurrency || "USD";
 
-  // Helper to format date strings (like availableFrom)
   const formatDate = (value?: string) => {
     if (!value) return null;
     const d = new Date(value);
@@ -192,8 +188,6 @@ export default function RoomDetailsPage() {
 
   return (
     <div className="main-layout">
-      <TemplateHeader />
-
       {/* PAGE TITLE */}
       <div className="back_re">
         <div className="container">
@@ -438,7 +432,7 @@ export default function RoomDetailsPage() {
                       </div>
                     )}
 
-                    {/* ✅ Booking section with occupancy + my booking check */}
+                    {/* Booking section with occupancy + my booking check */}
                     <div className="mt-4">
                       {hasMyBooking ? (
                         <p className="text-warning fw-bold">
@@ -494,8 +488,6 @@ export default function RoomDetailsPage() {
           )}
         </div>
       </div>
-
-      <TemplateFooter />
     </div>
   );
 }

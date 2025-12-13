@@ -187,7 +187,7 @@ RentHub/
 ├── .env.local                                   ← Environment variables (Mongo URL, JWT secret, Mapbox key, etc.)
 ├── package.json                                 ← Dependencies + npm scripts
 └── README.md                                    ← Documentation / setup instructions
-
+++++app/api/bookings/my-dorm/route.ts
 
 
 
