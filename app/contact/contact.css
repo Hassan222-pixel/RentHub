@@ -103,3 +103,16 @@
   cursor: pointer;
   font-weight: bold;
 }
+
+/* REMOVE breadcrumb bar on Contact page */
+.contact-hero .breadcrumb {
+  display: none;
+}
+
+/* FORCE hero title to be white */
+.contact-hero h1 {
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-shadow: 0 4px 15px rgba(0,0,0,0.4);
+}

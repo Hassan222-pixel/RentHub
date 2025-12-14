@@ -141,3 +141,15 @@
   margin-top: -15px;
   cursor: pointer;
 }
+
+/* REMOVE breadcrumb white bar */
+.about-hero .breadcrumb {
+  display: none;
+}
+
+/* ENSURE About title is white */
+.about-hero h1 {
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 1px;
+}

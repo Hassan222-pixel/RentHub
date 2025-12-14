@@ -32,8 +32,8 @@ export default function PropertiesPage() {
       {/* HERO */}
       <div className="search-hero">
         <div className="search-hero-overlay">
-          <h1>Search results</h1>
-          <p className="breadcrumb">Home / Properties</p>
+          <h1>Our Rooms</h1>
+          <p className="breadcrumb">Home / Rooms</p>
 
           <div className="hero-search-container">
             <HeroSearch />
