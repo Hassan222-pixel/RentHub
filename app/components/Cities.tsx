@@ -7,7 +7,7 @@ const cities = [
   },
   {
     name: "Los Angeles",
-    image: "https://images.unsplash.com/photo-1502920917128-1aa500764b7a",
+    image: "https://images.unsplash.com/photo-1501594907352-04cda38ebc29",
   },
   {
     name: "Miami",

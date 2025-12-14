@@ -42,39 +42,48 @@ interface NewsData {
 }
 
 export default function NewsPage() {
-  const [mounted, setMounted] = useState(false);
   const [news, setNews] = useState<NewsData | null>(null);
-
-  // 🔥 CRITICAL: block render until client mount
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!mounted) return;
-
     const load = async () => {
-      const res = await fetch("/api/news", { cache: "no-store" });
-      const data = await res.json();
+      try {
+        const res = await fetch("/api/news", { cache: "no-store" });
+        const data = await res.json();
 
-      setNews({
-        bannerTitle: data.bannerTitle ?? "News",
-        bannerBackgroundImage: data.bannerBackgroundImage ?? "",
-        posts: data.posts ?? [],
-        categories: data.categories ?? [],
-        latestPosts: data.latestPosts ?? [],
-      });
+        setNews({
+          bannerTitle: data.bannerTitle ?? "News",
+          bannerBackgroundImage: data.bannerBackgroundImage ?? "",
+          posts: data.posts ?? [],
+          categories: data.categories ?? [],
+          latestPosts: data.latestPosts ?? [],
+        });
+      } catch (err) {
+        console.error("Failed to load news:", err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     load();
-  }, [mounted]);
+  }, []);
 
-  // ⛔ STOP SSR HTML FROM WINNING
-  if (!mounted || !news) return null;
+  /* ✅ SAFE LOADING STATES */
+  if (loading) {
+    return <div className="p-6 text-center">Loading news...</div>;
+  }
+
+  if (!news) {
+    return (
+      <div className="p-6 text-center text-red-600">
+        Failed to load news.
+      </div>
+    );
+  }
 
   return (
     <main className="news-wrapper">
-
+      {/* HERO */}
       <div
         className="news-hero"
         style={{ backgroundImage: `url(${news.bannerBackgroundImage})` }}
@@ -88,8 +97,8 @@ export default function NewsPage() {
         </div>
       </div>
 
+      {/* CONTENT */}
       <section className="news-container">
-
         <div className="news-left">
           {news.posts.map((post, i) => (
             <div className="news-entry" key={i}>
@@ -106,7 +115,9 @@ export default function NewsPage() {
                   <span> {post.commentsCount} Comments</span>
                 </div>
 
-                {post.image && <img src={post.image} />}
+                {post.image && (
+                  <img src={post.image} alt={post.title} />
+                )}
                 <p className="entry-text">{post.excerpt}</p>
               </div>
             </div>
@@ -114,7 +125,6 @@ export default function NewsPage() {
         </div>
 
         <div className="news-right">
-
           <div className="sidebar-box">
             <h3>Categories</h3>
             <ul>
@@ -130,7 +140,9 @@ export default function NewsPage() {
             <h3>Latest Posts</h3>
             {news.latestPosts.map((p, i) => (
               <div className="latest-post" key={i}>
-                {p.image && <img src={p.image} />}
+                {p.image && (
+                  <img src={p.image} alt={p.title} />
+                )}
                 <div>
                   <h4>{p.title}</h4>
                   <p>By {p.author}</p>
@@ -138,7 +150,6 @@ export default function NewsPage() {
               </div>
             ))}
           </div>
-
         </div>
       </section>
 
@@ -146,3 +157,4 @@ export default function NewsPage() {
     </main>
   );
 }
+  

@@ -1,51 +1,87 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-export default function FooterManagerPage() {
-  const [text, setText] = useState("");
-  const [facebook, setFacebook] = useState("");
-  const [twitter, setTwitter] = useState("");
-  const [linkedin, setLinkedin] = useState("");
+export default function FooterManager() {
+  const [description, setDescription] = useState("");
+  const [properties, setProperties] = useState<any[]>([]);
 
-  const handleSave = () => {
-    alert("Footer Saved (DB coming later)");
+  useEffect(() => {
+    fetch("/api/footer")
+      .then((res) => res.json())
+      .then((data) => {
+        setDescription(data.description);
+        setProperties(data.properties || []);
+      });
+  }, []);
+
+  const save = async () => {
+    await fetch("/api/footer", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description, properties }),
+    });
+
+    alert("Footer updated");
+  };
+
+  const updateProperty = (i: number, key: string, value: string) => {
+    const copy = [...properties];
+    copy[i][key] = value;
+    setProperties(copy);
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Footer Manager</h1>
+    <div style={{ padding: 30 }}>
+      <h2>Footer Settings</h2>
 
-      <div className="mb-3">
-        <label className="fw-semibold">Footer Text</label>
-        <textarea
-          className="form-control"
-          rows={3}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-        ></textarea>
-      </div>
+      <label>Description</label>
+      <textarea
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        style={{ width: "100%", height: 100 }}
+      />
 
-      <h4 className="fw-bold mt-4">Social Links</h4>
+      <h3 style={{ marginTop: 30 }}>Latest Properties</h3>
 
-      <div className="mb-2">
-        <label className="fw-semibold">Facebook</label>
-        <input className="form-control" value={facebook} onChange={(e) => setFacebook(e.target.value)} />
-      </div>
+      {properties.map((p, i) => (
+        <div key={i} style={{ marginBottom: 20 }}>
+          <input
+            placeholder="City"
+            value={p.city}
+            onChange={(e) => updateProperty(i, "city", e.target.value)}
+          />
+          <input
+            placeholder="Title"
+            value={p.title}
+            onChange={(e) => updateProperty(i, "title", e.target.value)}
+          />
+          <input
+            placeholder="Price"
+            value={p.price}
+            onChange={(e) => updateProperty(i, "price", e.target.value)}
+          />
+          <input
+            placeholder="Image URL"
+            value={p.image}
+            onChange={(e) => updateProperty(i, "image", e.target.value)}
+          />
+        </div>
+      ))}
 
-      <div className="mb-2">
-        <label className="fw-semibold">Twitter</label>
-        <input className="form-control" value={twitter} onChange={(e) => setTwitter(e.target.value)} />
-      </div>
-
-      <div className="mb-2">
-        <label className="fw-semibold">LinkedIn</label>
-        <input className="form-control" value={linkedin} onChange={(e) => setLinkedin(e.target.value)} />
-      </div>
-
-      <button className="btn btn-primary mt-3" onClick={handleSave}>
-        Save Footer
+      <button
+        onClick={() =>
+          setProperties([
+            ...properties,
+            { city: "", title: "", price: "", image: "" },
+          ])
+        }
+      >
+        + Add Property
       </button>
+
+      <br /><br />
+      <button onClick={save}>Save Footer</button>
     </div>
   );
 }
