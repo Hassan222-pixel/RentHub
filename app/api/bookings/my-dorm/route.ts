@@ -9,7 +9,6 @@ type CurrentUser = {
   role: string;
 };
 
-// Minimal shape for the booking we are selecting here
 type LeanBooking = {
   _id: any;
   status: string;
@@ -23,10 +22,7 @@ export async function GET(req: NextRequest) {
 
     const user = (await getCurrentUserFromApi()) as CurrentUser | null;
 
-    // Only clients can have this check
     if (!user || user.role !== "client") {
-      // We just say "no booking" instead of throwing unauthorized,
-      // so the public room details page does not break for non-clients.
       return NextResponse.json({ hasBooking: false }, { status: 200 });
     }
 
@@ -43,7 +39,7 @@ export async function GET(req: NextRequest) {
     const booking = (await Booking.findOne({
       dorm: dormId,
       client: user._id,
-      status: { $in: ["pending", "confirmed"] },
+      status: { $in: ["reserved", "confirmed"] },
     })
       .select("status startDate endDate")
       .lean()) as LeanBooking | null;

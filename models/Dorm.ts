@@ -4,40 +4,33 @@ import { IUser } from "./User";
 
 export type DormRoomType = "private" | "double" | "shared";
 export type DormGenderPreference = "any" | "male" | "female";
+export type AdminAvailability = "available" | "not_available";
 
 export interface IDorm extends Document {
-  owner: IUser["_id"]; // renter user
+  owner: IUser["_id"];
   title: string;
   description: string;
   city: string;
   address?: string;
   university?: string;
 
-  // Pricing
   pricePerNight?: number;
   pricePerMonth?: number;
 
-  // Availability basics
-  minStayNights?: number;
-
-  // Room details / rules
-  roomType?: DormRoomType; // private / double / shared
-  maxOccupants?: number; // derived for private/double, user-set for shared
+  roomType?: DormRoomType;
+  maxOccupants?: number;
   genderPreference?: DormGenderPreference;
 
-  // Rules
   allowsSmoking: boolean;
   allowsPets: boolean;
-  houseRules?: string[]; // list of rules
+  houseRules?: string[];
 
-  // Deposit (always USD conceptually)
   depositAmount?: number;
+  depositCurrency?: string;
 
-  // Location (for map & filtering)
   latitude?: number;
   longitude?: number;
 
-  // Boolean amenities
   hasWifi: boolean;
   hasAirConditioning: boolean;
   hasHeating: boolean;
@@ -45,13 +38,18 @@ export interface IDorm extends Document {
   hasLaundry: boolean;
   isFurnished: boolean;
 
-  // Extra amenities tags
   amenities: string[];
 
   images: string[];
-  profileImg?: string; // cover image
+  profileImg?: string;
   tour3DUrl?: string;
+
   isActive: boolean;
+
+  // ✅ Admin control (manual availability)
+  adminAvailability: AdminAvailability;
+  adminAvailabilityUpdatedAt?: Date;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -66,18 +64,10 @@ const DormSchema = new Schema<IDorm>(
     address: { type: String },
     university: { type: String },
 
-    // Pricing
     pricePerNight: { type: Number },
     pricePerMonth: { type: Number },
 
-    // Availability
-    minStayNights: { type: Number },
-
-    // Room details / rules
-    roomType: {
-      type: String,
-      enum: ["private", "double", "shared"],
-    },
+    roomType: { type: String, enum: ["private", "double", "shared"] },
     maxOccupants: { type: Number },
     genderPreference: {
       type: String,
@@ -85,19 +75,16 @@ const DormSchema = new Schema<IDorm>(
       default: "any",
     },
 
-    // Rules
     allowsSmoking: { type: Boolean, default: false },
     allowsPets: { type: Boolean, default: false },
     houseRules: [{ type: String }],
 
-    // Deposit
     depositAmount: { type: Number },
+    depositCurrency: { type: String, default: "USD" },
 
-    // Location
     latitude: { type: Number },
     longitude: { type: Number },
 
-    // Boolean amenities
     hasWifi: { type: Boolean, default: false },
     hasAirConditioning: { type: Boolean, default: false },
     hasHeating: { type: Boolean, default: false },
@@ -105,13 +92,22 @@ const DormSchema = new Schema<IDorm>(
     hasLaundry: { type: Boolean, default: false },
     isFurnished: { type: Boolean, default: false },
 
-    // Extra amenities tags
     amenities: [{ type: String }],
 
     images: [{ type: String }],
     profileImg: { type: String },
     tour3DUrl: { type: String },
+
     isActive: { type: Boolean, default: true },
+
+    // ✅ NEW FIELDS
+    adminAvailability: {
+      type: String,
+      enum: ["available", "not_available"],
+      default: "available",
+      index: true,
+    },
+    adminAvailabilityUpdatedAt: { type: Date },
   },
   { timestamps: true }
 );

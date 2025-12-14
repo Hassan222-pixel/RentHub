@@ -1,24 +1,58 @@
+// models/Booking.ts
 import mongoose, { Schema, Document, models } from "mongoose";
 import { IDorm } from "./Dorm";
 import { IUser } from "./User";
 
-export type BookingStatus = "pending" | "confirmed" | "cancelled";
+export type BookingStatus =
+  | "pending" // legacy
+  | "pending_payment"
+  | "reserved"
+  | "confirmed"
+  | "cancelled"
+  | "expired";
+
+export type PaymentType = "deposit" | "full";
+export type PaymentStatus = "unpaid" | "paid" | "refunded" | "failed";
+
+export type BookingMode = "normal" | "ongoing";
 
 export interface IBooking extends Document {
   dorm: IDorm["_id"];
-  renter: IUser["_id"]; // owner / landlord
-  client: IUser["_id"]; // student
+  renter: IUser["_id"];
+  client: IUser["_id"];
 
-  // Client snapshot info at the time of booking
   clientFirstName?: string;
   clientLastName?: string;
   clientPhone?: string;
 
   startDate: Date;
   endDate: Date;
+
   totalPrice: number;
-  status: BookingStatus;
-  cancelReason?: string; // e.g. "conflict", "renter_cancelled"
+
+  paymentType: PaymentType;
+  paymentStatus: PaymentStatus;
+  currency: string;
+
+  depositAmount?: number;
+  remainingAmount?: number;
+  deadlineToPayRest?: Date;
+
+  stripeSessionId?: string;
+  stripePaymentIntentId?: string;
+
+  platformFee?: number;
+  renterShare?: number;
+
+  // ✅ NEW (the real source of truth)
+  bookingMode: BookingMode;
+
+  // Backward compat (optional) – do NOT use as source of truth
+  isOngoing: boolean;
+
+  cancelReason?: string;
+  isTestPayment?: boolean;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,14 +69,59 @@ const BookingSchema = new Schema<IBooking>(
 
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
+
     totalPrice: { type: Number, required: true },
+
+    paymentType: {
+      type: String,
+      enum: ["deposit", "full"],
+      required: true,
+    },
+
+    paymentStatus: {
+      type: String,
+      enum: ["unpaid", "paid", "refunded", "failed"],
+      default: "unpaid",
+    },
+
+    currency: { type: String, default: "USD" },
+
+    depositAmount: { type: Number },
+    remainingAmount: { type: Number },
+    deadlineToPayRest: { type: Date },
+
+    stripeSessionId: { type: String },
+    stripePaymentIntentId: { type: String },
+
+    platformFee: { type: Number, default: 0 },
+    renterShare: { type: Number, default: 0 },
+
     status: {
       type: String,
-      enum: ["pending", "confirmed", "cancelled"],
-      default: "pending",
+      enum: [
+        "pending",
+        "pending_payment",
+        "reserved",
+        "confirmed",
+        "cancelled",
+        "expired",
+      ],
+      default: "pending_payment",
     },
-    // Reason for cancellation (used to show a specific message to the client)
+
+    // ✅ NEW
+    bookingMode: {
+      type: String,
+      enum: ["normal", "ongoing"],
+      default: "normal",
+      index: true,
+    },
+
+    // Backward compat
+    isOngoing: { type: Boolean, default: false },
+
     cancelReason: { type: String },
+    isTestPayment: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

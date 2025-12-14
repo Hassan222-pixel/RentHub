@@ -20,45 +20,37 @@ export type DormListItem = {
   maxOccupants?: number | null;
   genderPreference?: "any" | "male" | "female" | null;
 
-  // availability info coming from /api/dorms
   isOccupiedNow?: boolean;
-  occupiedUntil?: string | null;
 
-  // capacity info
   capacity?: number | null;
   availableBeds?: number | null;
+
+  // ✅ NEW
+  availableFrom?: string | null;
+
+  adminAvailability?: "available" | "not_available";
+  isAdminBlocked?: boolean;
 };
 
 function formatPrice(d: DormListItem): string {
-  if (d.pricePerMonth != null) {
+  if (d.pricePerMonth != null)
     return `$${d.pricePerMonth.toLocaleString()} / month`;
-  }
-  if (d.pricePerWeek != null) {
+  if (d.pricePerWeek != null)
     return `$${d.pricePerWeek.toLocaleString()} / week`;
-  }
-  if (d.pricePerNight != null) {
+  if (d.pricePerNight != null)
     return `$${d.pricePerNight.toLocaleString()} / night`;
-  }
   return "Contact for price";
 }
 
-// Uses availableBeds when provided (for double/shared logic)
 function formatBeds(d: DormListItem): string {
   if (typeof d.availableBeds === "number") {
-    if (d.availableBeds <= 0) {
-      return "🛏️ No beds available";
-    }
+    if (d.availableBeds <= 0) return "🛏️ No beds available";
     const label = d.availableBeds === 1 ? "bed available" : "beds available";
     return `🛏️ ${d.availableBeds} ${label}`;
   }
 
-  // Fallback static logic
-  if (d.roomType === "private") {
-    return "🛏️ 1 bed";
-  }
-  if (d.roomType === "double") {
-    return "🛏️ 2 beds";
-  }
+  if (d.roomType === "private") return "🛏️ 1 bed";
+  if (d.roomType === "double") return "🛏️ 2 beds";
   if (d.roomType === "shared") {
     const count = d.maxOccupants ?? 1;
     const label = count === 1 ? "bed" : "beds";
@@ -69,13 +61,20 @@ function formatBeds(d: DormListItem): string {
 
 function formatGender(d: DormListItem): string {
   const pref = d.genderPreference || "any";
-  if (pref === "male") {
-    return "👨 Only male";
-  }
-  if (pref === "female") {
-    return "👩 Only female";
-  }
+  if (pref === "male") return "👨 Only male";
+  if (pref === "female") return "👩 Only female";
   return "👨👩 Any";
+}
+
+function formatFrom(d: DormListItem): string {
+  if (d.isAdminBlocked) return "";
+  if (!d.availableFrom) return "";
+  const dt = new Date(d.availableFrom);
+  const label = dt.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+  });
+  return `From ${label}`;
 }
 
 export default function RoomPage() {
@@ -100,9 +99,7 @@ export default function RoomPage() {
         ];
         setCities(uniqueCities);
 
-        const uniRes = await fetch("/api/universities", {
-          cache: "no-store",
-        });
+        const uniRes = await fetch("/api/universities", { cache: "no-store" });
         if (uniRes.ok) {
           const uniData = await uniRes.json();
           const uniNames: string[] = (uniData.universities || []).map(
@@ -124,17 +121,17 @@ export default function RoomPage() {
 
   const cards: PropertyCard[] = filteredDorms.map((d) => {
     const isFullyOccupied =
-      typeof d.availableBeds === "number"
+      d.isAdminBlocked === true ||
+      (typeof d.availableBeds === "number"
         ? d.availableBeds <= 0
-        : d.isOccupiedNow === true;
+        : d.isOccupiedNow === true);
 
     const statusBadge = isFullyOccupied ? "Not available" : "Available";
-    const cityLine = d.city || "Unknown";
 
     return {
       id: d._id,
       title: d.title,
-      city: cityLine,
+      city: d.city || "Unknown",
       price: formatPrice(d),
       badge: statusBadge,
       image:
@@ -142,6 +139,10 @@ export default function RoomPage() {
         "https://images.unsplash.com/photo-1523217582562-09d0def993a6",
       href: `/room-details/${d._id}`,
       bedsLabel: formatBeds(d),
+
+      // ✅ NEW
+      availableFromLabel: formatFrom(d),
+
       genderLabel: formatGender(d),
     };
   });

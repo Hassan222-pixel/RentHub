@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
-// This type should match (or be compatible with) your Mongoose Dorm model.
 type DormType = {
   _id: string;
   title: string;
@@ -14,18 +13,12 @@ type DormType = {
   address?: string;
   university?: string;
 
-  // Pricing
   pricePerNight?: number;
   pricePerWeek?: number;
   pricePerMonth?: number;
   depositAmount?: number;
   depositCurrency?: string;
 
-  // Availability
-  availableFrom?: string; // will be an ISO string from API
-  minStayNights?: number;
-
-  // Room details / rules
   roomType?: "private" | "double" | "shared";
   maxOccupants?: number;
   genderPreference?: "any" | "male" | "female";
@@ -33,7 +26,6 @@ type DormType = {
   allowsPets?: boolean;
   houseRules?: string;
 
-  // Location
   latitude?: number;
   longitude?: number;
 
@@ -41,29 +33,28 @@ type DormType = {
   images?: string[];
   profileImg?: string;
   tour3DUrl?: string;
+
+  adminAvailability?: "available" | "not_available";
 };
 
-// Response shape from /api/dorms/[id]
 type DormApiResponse = {
   dorm: DormType;
   isOccupiedNow?: boolean;
   occupiedUntil?: string | null;
+
+  adminAvailability?: "available" | "not_available";
+  isAdminBlocked?: boolean;
 };
 
 type MyDormBookingResponse = {
   hasBooking: boolean;
-  booking?: {
-    status: string;
-    startDate: string;
-    endDate: string;
-  };
+  booking?: { status: string; startDate: string; endDate: string };
 } | null;
 
 export default function RoomDetailsPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
 
-  // useParams can return string | string[] | undefined
   const rawId = params?.id;
   const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
@@ -72,18 +63,16 @@ export default function RoomDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Availability flags from /api/dorms/[id]
   const [isOccupiedNow, setIsOccupiedNow] = useState<boolean>(false);
   const [occupiedUntil, setOccupiedUntil] = useState<string | null>(null);
 
-  // does the current client already have a booking for this room?
+  const [isAdminBlocked, setIsAdminBlocked] = useState<boolean>(false);
+
   const [hasMyBooking, setHasMyBooking] = useState<boolean>(false);
   const [myBookingStatus, setMyBookingStatus] = useState<string | null>(null);
 
-  // Load dorm data by id
   useEffect(() => {
     if (!id) return;
-
     let cancelled = false;
 
     async function fetchDorm() {
@@ -92,16 +81,17 @@ export default function RoomDetailsPage() {
         setError(null);
 
         const res = await fetch(`/api/dorms/${id}`);
-
-        if (!res.ok) {
-          throw new Error("Failed to load dorm");
-        }
+        if (!res.ok) throw new Error("Failed to load dorm");
 
         const data: DormApiResponse = await res.json();
+
         if (!cancelled) {
           setDorm(data.dorm);
 
-          setIsOccupiedNow(!!data.isOccupiedNow);
+          setIsAdminBlocked(!!data.isAdminBlocked);
+
+          // keep old logic but admin block overrides
+          setIsOccupiedNow(!!data.isOccupiedNow || !!data.isAdminBlocked);
           setOccupiedUntil(data.occupiedUntil ?? null);
 
           const firstImage =
@@ -113,27 +103,20 @@ export default function RoomDetailsPage() {
         }
       } catch (err) {
         console.error(err);
-        if (!cancelled) {
-          setError("Could not load this room.");
-        }
+        if (!cancelled) setError("Could not load this room.");
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
 
     fetchDorm();
-
     return () => {
       cancelled = true;
     };
   }, [id]);
 
-  // check if the current client already has a booking for this dorm
   useEffect(() => {
     if (!id) return;
-
     let cancelled = false;
 
     async function checkMyBooking() {
@@ -141,11 +124,7 @@ export default function RoomDetailsPage() {
         const res = await fetch(`/api/bookings/my-dorm?dormId=${id}`, {
           cache: "no-store",
         });
-
-        if (!res.ok) {
-          // If unauthorized or any error, just ignore and assume no booking
-          return;
-        }
+        if (!res.ok) return;
 
         const data: MyDormBookingResponse = await res.json();
         if (cancelled || !data) return;
@@ -163,7 +142,6 @@ export default function RoomDetailsPage() {
     }
 
     checkMyBooking();
-
     return () => {
       cancelled = true;
     };
@@ -171,24 +149,19 @@ export default function RoomDetailsPage() {
 
   const currency = dorm?.depositCurrency || "USD";
 
-  const formatDate = (value?: string) => {
-    if (!value) return null;
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return null;
-    return d.toLocaleDateString();
-  };
-
   const occupiedUntilDate =
     occupiedUntil != null ? new Date(occupiedUntil) : null;
 
   const handleBookClick = () => {
-    if (!dorm?._id || isOccupiedNow || hasMyBooking) return;
+    if (!dorm?._id) return;
+    if (isAdminBlocked) return;
+    if (isOccupiedNow) return;
+    if (hasMyBooking) return;
     router.push(`/room/request/${dorm._id}`);
   };
 
   return (
     <div className="main-layout">
-      {/* PAGE TITLE */}
       <div className="back_re">
         <div className="container">
           <div className="row">
@@ -201,10 +174,8 @@ export default function RoomDetailsPage() {
         </div>
       </div>
 
-      {/* MAIN CONTENT */}
       <div className="our_room">
         <div className="container">
-          {/* Loading state */}
           {loading && (
             <div className="row">
               <div className="col-md-12">
@@ -213,7 +184,6 @@ export default function RoomDetailsPage() {
             </div>
           )}
 
-          {/* Error state */}
           {error && !loading && (
             <div className="row">
               <div className="col-md-12">
@@ -222,11 +192,9 @@ export default function RoomDetailsPage() {
             </div>
           )}
 
-          {/* Main details when dorm is loaded */}
           {dorm && !loading && !error && (
             <>
               <div className="row">
-                {/* LEFT: Image gallery */}
                 <div className="col-md-6">
                   <div className="room_img mb-3">
                     <figure>
@@ -248,7 +216,6 @@ export default function RoomDetailsPage() {
                     </figure>
                   </div>
 
-                  {/* Thumbnails from images[] */}
                   {dorm.images && dorm.images.length > 0 && (
                     <div className="d-flex flex-wrap gap-2">
                       {dorm.images.map((img, index) => (
@@ -284,33 +251,11 @@ export default function RoomDetailsPage() {
                   )}
                 </div>
 
-                {/* RIGHT: Text details */}
                 <div className="col-md-6">
                   <div className="bed_room">
                     <h3>{dorm.title}</h3>
-
-                    {/* Description */}
                     <p>{dorm.description}</p>
 
-                    {/* Location section */}
-                    <h4 className="mt-3">Location</h4>
-                    <ul>
-                      <li>
-                        <strong>City:</strong> {dorm.city}
-                      </li>
-                      {dorm.address && (
-                        <li>
-                          <strong>Address:</strong> {dorm.address}
-                        </li>
-                      )}
-                      {dorm.university && (
-                        <li>
-                          <strong>Near University:</strong> {dorm.university}
-                        </li>
-                      )}
-                    </ul>
-
-                    {/* Pricing section */}
                     <h4 className="mt-3">Pricing</h4>
                     <ul>
                       {dorm.pricePerMonth != null && (
@@ -331,110 +276,14 @@ export default function RoomDetailsPage() {
                           {currency}
                         </li>
                       )}
-                      {dorm.depositAmount != null && (
-                        <li>
-                          <strong>Deposit:</strong> {dorm.depositAmount}{" "}
-                          {currency}
-                        </li>
-                      )}
                     </ul>
 
-                    {/* Room info & rules */}
-                    <h4 className="mt-3">Room Information</h4>
-                    <ul>
-                      {dorm.roomType && (
-                        <li>
-                          <strong>Room Type:</strong>{" "}
-                          {dorm.roomType.charAt(0).toUpperCase() +
-                            dorm.roomType.slice(1)}
-                        </li>
-                      )}
-                      {dorm.maxOccupants != null && (
-                        <li>
-                          <strong>Max Occupants:</strong> {dorm.maxOccupants}
-                        </li>
-                      )}
-                      {dorm.genderPreference && (
-                        <li>
-                          <strong>Gender Preference:</strong>{" "}
-                          {dorm.genderPreference === "any"
-                            ? "Any"
-                            : dorm.genderPreference === "male"
-                            ? "Male only"
-                            : "Female only"}
-                        </li>
-                      )}
-                      <li>
-                        <strong>Smoking:</strong>{" "}
-                        {dorm.allowsSmoking ? "Allowed" : "Not allowed"}
-                      </li>
-                      <li>
-                        <strong>Pets:</strong>{" "}
-                        {dorm.allowsPets ? "Allowed" : "Not allowed"}
-                      </li>
-                      {dorm.houseRules && (
-                        <li>
-                          <strong>House Rules:</strong> {dorm.houseRules}
-                        </li>
-                      )}
-                    </ul>
-
-                    {/* Amenities list */}
-                    {dorm.amenities && dorm.amenities.length > 0 && (
-                      <>
-                        <h4 className="mt-3">Amenities</h4>
-                        <div className="d-flex flex-wrap gap-2">
-                          {dorm.amenities.map((amenity, index) => (
-                            <span
-                              key={index}
-                              className="badge badge-pill badge-secondary"
-                              style={{
-                                padding: "6px 10px",
-                                fontSize: "12px",
-                                borderRadius: "12px",
-                              }}
-                            >
-                              {amenity}
-                            </span>
-                          ))}
-                        </div>
-                      </>
-                    )}
-
-                    {/* Availability & Deposit */}
-                    <h4 className="mt-3">Availability</h4>
-                    <ul>
-                      {formatDate(dorm.availableFrom) && (
-                        <li>
-                          <strong>Available From:</strong>{" "}
-                          {formatDate(dorm.availableFrom)}
-                        </li>
-                      )}
-                      {dorm.minStayNights != null && (
-                        <li>
-                          <strong>Minimum Stay:</strong> {dorm.minStayNights}{" "}
-                          night(s)
-                        </li>
-                      )}
-                    </ul>
-
-                    {/* Optional 3D Tour link */}
-                    {dorm.tour3DUrl && (
-                      <div className="mt-3">
-                        <a
-                          href={dorm.tour3DUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn btn-outline-primary btn-sm"
-                        >
-                          View 3D Tour
-                        </a>
-                      </div>
-                    )}
-
-                    {/* Booking section with occupancy + my booking check */}
                     <div className="mt-4">
-                      {hasMyBooking ? (
+                      {isAdminBlocked ? (
+                        <p className="text-danger fw-bold">
+                          Not available (disabled by admin)
+                        </p>
+                      ) : hasMyBooking ? (
                         <p className="text-warning fw-bold">
                           You already have a booking for this room
                           {myBookingStatus ? ` (${myBookingStatus})` : ""}.
@@ -448,16 +297,18 @@ export default function RoomDetailsPage() {
                             day: "numeric",
                           })}
                         </p>
-                      ) : !isOccupiedNow ? (
+                      ) : (
                         <p className="text-success fw-bold">
                           This room is available
                         </p>
-                      ) : null}
+                      )}
 
                       <button
                         type="button"
                         className="btn btn-primary"
-                        disabled={isOccupiedNow || hasMyBooking}
+                        disabled={
+                          isAdminBlocked || isOccupiedNow || hasMyBooking
+                        }
                         onClick={handleBookClick}
                       >
                         Book this room
@@ -467,7 +318,6 @@ export default function RoomDetailsPage() {
                 </div>
               </div>
 
-              {/* Back to rooms button under the details */}
               <div className="row mt-4">
                 <div className="col-md-12">
                   <Link href="/room" className="btn btn-secondary">
@@ -478,7 +328,6 @@ export default function RoomDetailsPage() {
             </>
           )}
 
-          {/* If there is no dorm (for example, not found) */}
           {!loading && !dorm && !error && (
             <div className="row">
               <div className="col-md-12">

@@ -17,7 +17,8 @@ import {
   FiMonitor,
   FiLogOut,
   FiMenu,
-  FiMapPin, // 👈 NEW
+  FiMapPin,
+  FiClipboard, // ✅ NEW
 } from "react-icons/fi";
 
 interface User {
@@ -33,15 +34,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [collapsed, setCollapsed] = useState(false); // sidebar collapsed (desktop)
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false); // sidebar visible (mobile)
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const [theme, setTheme] = useState<ThemeOption>("system");
 
   const router = useRouter();
   const pathname = usePathname();
 
-  // Load user
   useEffect(() => {
     const loadUser = async () => {
       try {
@@ -61,7 +61,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     loadUser();
   }, [router]);
 
-  // Theme load
   useEffect(() => {
     const stored =
       (localStorage.getItem("renthub-theme") as ThemeOption) || "system";
@@ -97,20 +96,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const isManagersAdmin = user.role === "managers-admin";
 
   const isActive = (t: string) => pathname?.startsWith(t);
-
   const avatarInitial = user.name?.[0]?.toUpperCase() || "S";
 
-  // Close mobile sidebar whenever a nav link is clicked
   const handleNavClick = () => {
     setMobileSidebarOpen(false);
   };
 
   return (
     <div className="renthub-app d-flex flex-column">
-      {/* Top bar */}
       <header className="renthub-topbar px-3 px-md-4">
         <div className="d-flex align-items-center gap-2">
-          {/* Mobile burger button */}
           <button
             type="button"
             className="renthub-burger-btn d-inline d-md-none me-1"
@@ -152,14 +147,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           )}
 
           <span className="d-none d-md-inline">{user.email}</span>
-
           <div className="renthub-avatar-circle">{avatarInitial}</div>
         </div>
       </header>
 
-      {/* MAIN CONTENT WRAPPER */}
       <div className="renthub-main-shell d-flex flex-grow-1">
-        {/* Sidebar */}
         <aside
           className={
             "renthub-sidebar d-flex flex-column" +
@@ -167,7 +159,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             (mobileSidebarOpen ? " renthub-sidebar-mobile-open" : "")
           }
         >
-          {/* Floating toggle (desktop only, hidden on mobile via CSS) */}
           <button
             className="renthub-sidebar-toggle"
             onClick={() => setCollapsed((c) => !c)}
@@ -189,7 +180,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <p className="renthub-nav-section-label">Navigation</p>
 
             <ul className="list-unstyled">
-              {/* HOME */}
               <li>
                 <Link
                   href="/dashboard"
@@ -204,7 +194,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 </Link>
               </li>
 
-              {/* ACCOUNTS */}
               {(isSuperAdmin || isAccountsAdmin) && (
                 <li>
                   <Link
@@ -223,7 +212,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 </li>
               )}
 
-              {/* MANAGERS */}
               {(isSuperAdmin || isManagersAdmin) && (
                 <li>
                   <Link
@@ -242,7 +230,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 </li>
               )}
 
-              {/* ADMIN USERS */}
               {isSuperAdmin && (
                 <li>
                   <Link
@@ -261,7 +248,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 </li>
               )}
 
-              {/* UNIVERSITIES – متاحة لكل الـ admin roles */}
               {(isSuperAdmin || isAccountsAdmin || isManagersAdmin) && (
                 <li>
                   <Link
@@ -279,10 +265,28 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   </Link>
                 </li>
               )}
+
+              {/* ✅ NEW: Booking Dorms */}
+              {(isSuperAdmin || isAccountsAdmin || isManagersAdmin) && (
+                <li>
+                  <Link
+                    href="/dashboard/bookings"
+                    className={
+                      "renthub-nav-link" +
+                      (isActive("/dashboard/bookings")
+                        ? " renthub-nav-link-active"
+                        : "")
+                    }
+                    onClick={handleNavClick}
+                  >
+                    <FiClipboard />
+                    <span>Booking Dorms</span>
+                  </Link>
+                </li>
+              )}
             </ul>
           </nav>
 
-          {/* LOGOUT */}
           <div className="renthub-sidebar-footer">
             <button
               type="button"
@@ -298,7 +302,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         </aside>
 
-        {/* Backdrop for mobile sidebar */}
         {mobileSidebarOpen && (
           <div
             className="renthub-sidebar-backdrop d-md-none"
@@ -306,7 +309,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           />
         )}
 
-        {/* Content */}
         <main className="renthub-main">
           <div className="renthub-content-card">{children}</div>
         </main>

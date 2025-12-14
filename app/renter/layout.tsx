@@ -289,23 +289,7 @@ export default function RenterLayout({ children }: { children: ReactNode }) {
                   <span className="renthub-nav-label">Bookings</span>
                 </Link>
               </li>
-              <li>
-                <Link
-                  href="/renter/requests"
-                  className={
-                    "renthub-nav-link" +
-                    (isActive("/renter/requests")
-                      ? " renthub-nav-link-active"
-                      : "")
-                  }
-                  onClick={handleNavClick}
-                >
-                  <span className="renthub-nav-icon">
-                    <FiFileText size={18} />
-                  </span>
-                  <span className="renthub-nav-label">Requests</span>
-                </Link>
-              </li>
+
               <li>
                 <Link
                   href="/renter/messages"

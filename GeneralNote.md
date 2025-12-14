@@ -154,8 +154,18 @@ RentHub/
 │       │
 │       ├── bookings/
 │       │   ├── route.ts                         ← Client-only: GET confirmed bookings for a dorm (by dormId) + POST to create a new pending booking request
-│       │   └── me/
-│       │       └── route.ts                     ← Client-only: GET conflict notifications for this user (used to show red spam/conflict messages on /room)
+│       │   ├── me/
+│       │   │   └── route.ts                     ← Client-only: GET conflict notifications for this user (used to show red spam/conflict messages on /room)
+│       │   └── my-dorm/
+│       │       └── route.ts                     ← NEW: GET bookings for a specific dorm (used by owner/admin to view dorm bookings)
+│       │
+│       ├── payments/                            ← NEW: Stripe payments API group
+│       │   ├── create-checkout-session/
+│       │   │   └── route.ts                     ← NEW: Creates Stripe Checkout Session for deposit/full payment
+│       │   ├── confirm/
+│       │   │   └── route.ts                     ← NEW: Confirms payment and updates booking status in DB
+│       │   └── webhook/
+│       │       └── route.ts                     ← NEW: Stripe webhook handler for automatic payment updates
 │       │
 │       └── renter/
 │           ├── listings/
@@ -174,7 +184,8 @@ RentHub/
 ├── lib/
 │   ├── mongodb.ts                               ← MongoDB/Mongoose connection helper (cached connection with serverSelectionTimeout and reuse across requests)
 │   ├── auth.ts                                  ← JWT sign/verify helpers (used by auth routes)
-│   └── currentUser.ts                           ← Helper to get current user from JWT cookie inside API routes
+│   ├── currentUser.ts                           ← Helper to get current user from JWT cookie inside API routes
+│   └── stripe.ts                                ← NEW: Stripe initialization helper (reads STRIPE_SECRET_KEY, exports stripe client)
 │
 ├── models/
 │   ├── User.ts                                  ← User schema (admins + managers + renters + clients)
@@ -187,7 +198,39 @@ RentHub/
 ├── .env.local                                   ← Environment variables (Mongo URL, JWT secret, Mapbox key, etc.)
 ├── package.json                                 ← Dependencies + npm scripts
 └── README.md                                    ← Documentation / setup instructions
-++++app/api/bookings/my-dorm/route.ts
+
+
+app/api/bookings/my-dorm/route.ts
+
+Returns bookings for a single dorm (by dormId) for owner/admin use.
+Used to display who booked the dorm and the current booking status.
+
+app/api/payments/create-checkout-session/route.ts
+
+Creates a Stripe Checkout Session for deposit or full payment.
+Returns a Stripe URL so the client can pay securely.
+
+app/api/payments/confirm/route.ts
+
+Confirms the payment result and updates the booking document.
+Marks booking as paid / confirmed depending on your payment logic.
+
+app/api/payments/webhook/route.ts
+
+Receives Stripe webhook events (payment success/failure).
+Automatically syncs payment state to your database.
+
+lib/stripe.ts
+
+Central Stripe client setup (Stripe SDK init).
+Keeps Stripe secret key usage in one safe place.
+
+app/api/payments/webhook/route.ts does not exist in this project, and app/api/payments/confirm/route.ts is the file that handles the payment confirmation logic and does the required job instead.
+
+
+
+
+
 
 
 

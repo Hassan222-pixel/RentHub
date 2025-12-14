@@ -12,6 +12,10 @@ export type PropertyCard = {
   href?: string;
 
   bedsLabel?: string;
+
+  // ✅ NEW
+  availableFromLabel?: string;
+
   genderLabel?: string;
 };
 
@@ -50,12 +54,15 @@ export default function RecentProperties({
 
             const badgeStyle: CSSProperties = {};
             if (isNotAvailable) {
-              badgeStyle.backgroundColor = "#dc3545"; // red
+              badgeStyle.backgroundColor = "#dc3545";
               badgeStyle.color = "#ffffff";
             } else if (isAvailable) {
-              badgeStyle.backgroundColor = "#198754"; // green
+              badgeStyle.backgroundColor = "#198754";
               badgeStyle.color = "#ffffff";
             }
+
+            const showFooter =
+              !!p.bedsLabel || !!p.availableFromLabel || !!p.genderLabel;
 
             const card = (
               <div className="property-card">
@@ -78,10 +85,25 @@ export default function RecentProperties({
                   <p className="property-city">{p.city}</p>
                 </div>
 
-                {(p.bedsLabel || p.genderLabel) && (
+                {showFooter && (
                   <div className="property-footer">
-                    <span>{p.bedsLabel}</span>
-                    <span>{p.genderLabel}</span>
+                    <span>{p.bedsLabel ?? ""}</span>
+
+                    <span
+                      style={{
+                        flex: 1,
+                        textAlign: "center",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        opacity: 0.9,
+                      }}
+                    >
+                      {p.availableFromLabel ?? ""}
+                    </span>
+
+                    <span style={{ textAlign: "right" }}>
+                      {p.genderLabel ?? ""}
+                    </span>
                   </div>
                 )}
               </div>
