@@ -32,16 +32,14 @@ export async function GET(_req: NextRequest, context: RouteContext) {
   try {
     await connectToDatabase();
     const payload = await requireAdmin();
-    if (!payload) {
+    if (!payload)
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
-    }
 
     const { id } = await context.params;
     const uni = await University.findById(id).lean();
 
-    if (!uni) {
+    if (!uni)
       return NextResponse.json({ message: "Not found" }, { status: 404 });
-    }
 
     return NextResponse.json({ university: uni });
   } catch (error) {
@@ -57,29 +55,27 @@ export async function PUT(req: NextRequest, context: RouteContext) {
   try {
     await connectToDatabase();
     const payload = await requireAdmin();
-    if (!payload) {
+    if (!payload)
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
-    }
 
     const { id } = await context.params;
-    const { name, latitude, longitude, image } = await req.json();
+    const { name, area, latitude, longitude, image } = await req.json();
 
-    if (!name || latitude === undefined || longitude === undefined) {
+    if (!name || !area || latitude === undefined || longitude === undefined) {
       return NextResponse.json(
-        { message: "Name, latitude and longitude are required" },
+        { message: "Name, area, latitude and longitude are required" },
         { status: 400 }
       );
     }
 
     const uni = await University.findByIdAndUpdate(
       id,
-      { name, latitude, longitude, image },
+      { name, area, latitude, longitude, image }, // ✅ NEW
       { new: true }
     );
 
-    if (!uni) {
+    if (!uni)
       return NextResponse.json({ message: "Not found" }, { status: 404 });
-    }
 
     return NextResponse.json({ university: uni });
   } catch (error) {
@@ -95,16 +91,14 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
   try {
     await connectToDatabase();
     const payload = await requireAdmin();
-    if (!payload) {
+    if (!payload)
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
-    }
 
     const { id } = await context.params;
     const deleted = await University.findByIdAndDelete(id);
 
-    if (!deleted) {
+    if (!deleted)
       return NextResponse.json({ message: "Not found" }, { status: 404 });
-    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

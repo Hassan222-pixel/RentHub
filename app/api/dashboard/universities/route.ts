@@ -51,17 +51,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
-    const { name, latitude, longitude, image } = await req.json();
+    const { name, area, latitude, longitude, image } = await req.json();
 
-    if (!name || latitude === undefined || longitude === undefined) {
+    if (!name || !area || latitude === undefined || longitude === undefined) {
       return NextResponse.json(
-        { message: "Name, latitude and longitude are required" },
+        { message: "Name, area, latitude and longitude are required" },
         { status: 400 }
       );
     }
 
     const uni = await University.create({
       name,
+      area, // ✅ NEW
       latitude,
       longitude,
       image,

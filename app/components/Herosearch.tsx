@@ -1,34 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import "./hero-search.css";
 import type { DormListItem } from "../room/page";
 
 type Props = {
-  cities?: string[]; // optional so HeroSearch can be used on other pages
+  // بدل cities (دورم city) رح نستعملها كـ Areas
+  cities?: string[]; // AREAS list (Beirut/Tripoli/...)
+  // backward compat: ممكن تكون string[]
   universities?: string[];
+
+  // ✅ الأفضل: تبعت الجامعات مع area
+  universitiesWithAreas?: { name: string; area: string }[];
+
   initialDorms?: DormListItem[];
   onResults?: (dorms: DormListItem[]) => void;
 };
 
-// Used when checking confirmed bookings
 type BookingSummary = {
   startDate: string;
   endDate: string;
 };
 
 export default function HeroSearch({
-  cities = [], // safe defaults so .map() never crashes
+  cities = [],
   universities = [],
+  universitiesWithAreas = [],
   initialDorms,
   onResults,
 }: Props) {
   const [roomType, setRoomType] = useState<
     "" | "private" | "double" | "shared"
   >("");
-  const [city, setCity] = useState("");
+
+  // ✅ بدل city صارت Area
+  const [area, setArea] = useState("");
   const [university, setUniversity] = useState("");
 
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([
@@ -39,13 +47,12 @@ export default function HeroSearch({
 
   const [loading, setLoading] = useState(false);
 
-  const today = (() => {
+  const today = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
-  })();
+  }, []);
 
-  // ---- availability helper (same idea as RoomFilterList) ----
   function hasOverlap(
     requestedStart: Date,
     requestedEnd: Date,
@@ -54,32 +61,51 @@ export default function HeroSearch({
     return bookings.some((b) => {
       const existingStart = new Date(b.startDate);
       const existingEnd = new Date(b.endDate);
-
       if (
         Number.isNaN(existingStart.getTime()) ||
         Number.isNaN(existingEnd.getTime())
-      ) {
+      )
         return false;
-      }
 
       return existingStart < requestedEnd && existingEnd > requestedStart;
     });
   }
 
-  // ---- MAIN SEARCH ----
+  // ✅ university options based on area
+  const filteredUniversities = useMemo(() => {
+    // إذا عنا universitiesWithAreas (الأفضل)
+    if (universitiesWithAreas.length > 0) {
+      const list =
+        area.trim().length > 0
+          ? universitiesWithAreas.filter((u) => u.area === area)
+          : universitiesWithAreas;
+
+      // unique names
+      return Array.from(new Set(list.map((u) => u.name))).sort();
+    }
+
+    // fallback: إذا الجامعات بس أسماء
+    return [...universities].sort();
+  }, [area, universities, universitiesWithAreas]);
+
+  // ✅ helper: universities in selected area (لما area تختار بدون university)
+  const universitiesInSelectedArea = useMemo(() => {
+    if (!area || universitiesWithAreas.length === 0) return [];
+    return universitiesWithAreas
+      .filter((u) => u.area === area)
+      .map((u) => u.name);
+  }, [area, universitiesWithAreas]);
+
   const handleSearch = async () => {
-    // If HeroSearch is used on a page without filtering (e.g. /news),
-    // just do nothing on click – avoid unnecessary fetching.
     if (!onResults) return;
 
     try {
       setLoading(true);
 
       const params = new URLSearchParams();
-
       if (roomType) params.set("roomType", roomType);
-      // very simple usage of q – you can improve later if you want
-      if (city) params.set("q", city);
+
+      // ✅ إذا الجامعة مختارة، خلّي البحث عليها مباشرة
       if (university) params.set("q", university);
 
       const url =
@@ -92,7 +118,15 @@ export default function HeroSearch({
 
       let filtered: DormListItem[] = data.dorms || [];
 
-      // filter by date availability only when a range is selected
+      // ✅ إذا area مختار وما في university، فلتر حسب الجامعات تبع هالـ area
+      if (area && !university && universitiesInSelectedArea.length > 0) {
+        const allowed = new Set(universitiesInSelectedArea);
+        filtered = filtered.filter((d) =>
+          d.university ? allowed.has(d.university) : false
+        );
+      }
+
+      // ✅ فلترة date range
       if (startDate && endDate) {
         const available: DormListItem[] = [];
 
@@ -111,10 +145,8 @@ export default function HeroSearch({
             const bookings: BookingSummary[] = bookingsData.bookings || [];
 
             const overlap = hasOverlap(startDate, endDate, bookings);
-
             if (!overlap) available.push(dorm);
           } catch {
-            // if bookings fail, keep the dorm visible (fail-open)
             available.push(dorm);
           }
         }
@@ -130,17 +162,13 @@ export default function HeroSearch({
     }
   };
 
-  // ---- CLEAR ----
   const handleClear = () => {
     setRoomType("");
-    setCity("");
+    setArea("");
     setUniversity("");
     setDateRange([null, null]);
 
-    // Only reset list if /room passed data into this component
-    if (onResults && initialDorms) {
-      onResults(initialDorms);
-    }
+    if (onResults && initialDorms) onResults(initialDorms);
   };
 
   return (
@@ -158,12 +186,18 @@ export default function HeroSearch({
         <option value="shared">Shared</option>
       </select>
 
-      {/* City */}
-      <select value={city} onChange={(e) => setCity(e.target.value)}>
-        <option value="">City</option>
-        {cities.map((c) => (
-          <option key={c} value={c}>
-            {c}
+      {/* ✅ Area (was City) */}
+      <select
+        value={area}
+        onChange={(e) => {
+          setArea(e.target.value);
+          setUniversity(""); // ✅ reset الجامعة لما area تتغير
+        }}
+      >
+        <option value="">Area</option>
+        {cities.map((a) => (
+          <option key={a} value={a}>
+            {a}
           </option>
         ))}
       </select>
@@ -174,7 +208,7 @@ export default function HeroSearch({
         onChange={(e) => setUniversity(e.target.value)}
       >
         <option value="">University</option>
-        {universities.map((u) => (
+        {filteredUniversities.map((u) => (
           <option key={u} value={u}>
             {u}
           </option>
@@ -197,7 +231,6 @@ export default function HeroSearch({
         />
       </div>
 
-      {/* Buttons */}
       <button className="search-btn" onClick={handleSearch} disabled={loading}>
         {loading ? "SEARCHING..." : "SEARCH"}
       </button>

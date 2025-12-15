@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/universities/route.ts
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
@@ -9,14 +10,15 @@ export async function GET() {
 
     const universities = await University.find({})
       .sort({ name: 1 })
-      .select("name")
+      .select("name area")
       .lean()
       .exec();
 
     return NextResponse.json({
-      universities: universities.map((u) => ({
+      universities: universities.map((u: any) => ({
         _id: String(u._id),
         name: u.name,
+        area: u.area || "",
       })),
     });
   } catch (err) {

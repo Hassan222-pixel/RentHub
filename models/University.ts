@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, models } from "mongoose";
 
 export interface IUniversity extends Document {
   name: string;
+  area: string; // ✅ NEW
   latitude: number;
   longitude: number;
   image?: string;
@@ -13,6 +14,10 @@ export interface IUniversity extends Document {
 const UniversitySchema = new Schema<IUniversity>(
   {
     name: { type: String, required: true, trim: true },
+
+    // ✅ NEW
+    area: { type: String, required: true, trim: true, index: true },
+
     latitude: { type: Number, required: true },
     longitude: { type: Number, required: true },
     image: { type: String },

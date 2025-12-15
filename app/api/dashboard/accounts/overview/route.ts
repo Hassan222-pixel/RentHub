@@ -14,30 +14,18 @@ function toNumber(v: any) {
   return Number.isFinite(n) ? n : 0;
 }
 
-// ✅ Money actually received so far (deposit/full)
-function getPaidAmount(b: any) {
-  // only called when paymentStatus === "paid"
-  if (b.status === "confirmed") return toNumber(b.totalPrice);
-  // reserved => deposit paid
-  return toNumber(b.depositAmount);
+function calcPaidAmount(b: any) {
+  // ✅ ONLY what was actually paid now
+  if (b.paymentType === "deposit") return toNumber(b.depositAmount);
+  return toNumber(b.totalPrice);
 }
 
-function toDayKeyUTC(d: Date) {
-  const x = new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
-  );
-  const yyyy = x.getUTCFullYear();
-  const mm = String(x.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(x.getUTCDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+function calcPlatformFee(paidAmount: number) {
+  return Number((paidAmount * 0.08).toFixed(2));
 }
 
-function addDaysUTC(date: Date, days: number) {
-  const x = new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
-  );
-  x.setUTCDate(x.getUTCDate() + days);
-  return x;
+function calcRenterShare(paidAmount: number) {
+  return Number((paidAmount * 0.92).toFixed(2));
 }
 
 export async function GET(_req: NextRequest) {
@@ -49,36 +37,24 @@ export async function GET(_req: NextRequest) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // ✅ last 30 days window (UTC)
-    const todayUTC = new Date();
-    const startUTC = addDaysUTC(todayUTC, -29);
-
-    // ✅ Only PAID bookings that affect money
-    const bookingsRaw = await Booking.find({
-      paymentStatus: "paid",
-      status: { $in: ["reserved", "confirmed"] },
-      createdAt: { $gte: startUTC }, // daily graph range
-    })
-      .sort({ createdAt: -1 })
-      .populate("dorm", "title")
-      .populate("renter", "name email")
-      .lean();
-
-    // NOTE: totals should be over ALL time or last 30 days?
-    // You want accounts totals overall, so we load ALL PAID bookings for totals + renters + latest.
-    const allPaidRaw = await Booking.find({
+    // ✅ Only paid bookings
+    const bookings = await Booking.find({
       paymentStatus: "paid",
       status: { $in: ["reserved", "confirmed"] },
     })
-      .sort({ createdAt: -1 })
       .populate("dorm", "title")
       .populate("renter", "name email")
+      .sort({ createdAt: -1 })
       .lean();
 
-    let totalRevenue = 0; // received (deposit + full)
-    let totalPlatformFee = 0; // 8% of received
-    let totalRenterShare = 0; // 92% of received
+    let totalRevenue = 0; // ✅ paid money only
+    let totalPlatformFee = 0;
+    let totalRenterShare = 0;
 
+    // ✅ monthly revenue based on paid money only
+    const monthlyMap: Record<string, number> = {};
+
+    // ✅ renters breakdown (based on paid money only)
     const rentersMap: Record<
       string,
       {
@@ -86,36 +62,53 @@ export async function GET(_req: NextRequest) {
         renterName: string;
         renterEmail: string;
         bookingsCount: number;
-        renterRevenue: number; // ✅ renter share only (after 8%)
+        renterRevenue: number; // 92% of paid money
       }
     > = {};
 
-    for (const b of allPaidRaw as any[]) {
-      const paidAmount = getPaidAmount(b);
-      const platformFee = Number((paidAmount * 0.08).toFixed(2));
-      const renterShare = Number((paidAmount * 0.92).toFixed(2));
+    bookings.forEach((b: any) => {
+      const paidAmount = calcPaidAmount(b);
+      const platformFee = calcPlatformFee(paidAmount);
+      const renterShare = calcRenterShare(paidAmount);
 
       totalRevenue += paidAmount;
       totalPlatformFee += platformFee;
       totalRenterShare += renterShare;
 
-      const renterId = b.renter?._id ? b.renter._id.toString() : "unknown";
-      const renterName = (b.renter?.name || "Unknown").toString();
-      const renterEmail = (b.renter?.email || "").toString();
+      // monthly key
+      const createdAt = new Date(b.createdAt);
+      const key = `${createdAt.getFullYear()}-${String(
+        createdAt.getMonth() + 1
+      ).padStart(2, "0")}`;
+      monthlyMap[key] = (monthlyMap[key] || 0) + paidAmount;
 
-      if (!rentersMap[renterId]) {
-        rentersMap[renterId] = {
-          renterId,
-          renterName,
-          renterEmail,
-          bookingsCount: 0,
-          renterRevenue: 0,
-        };
+      // renters aggregation
+      const renterId =
+        b.renter?._id?.toString?.() || b.renter?.toString?.() || "";
+      const renterName = b.renter?.name || "Unknown";
+      const renterEmail = b.renter?.email || "";
+
+      if (renterId) {
+        if (!rentersMap[renterId]) {
+          rentersMap[renterId] = {
+            renterId,
+            renterName,
+            renterEmail,
+            bookingsCount: 0,
+            renterRevenue: 0,
+          };
+        }
+        rentersMap[renterId].bookingsCount += 1;
+        rentersMap[renterId].renterRevenue += renterShare;
       }
+    });
 
-      rentersMap[renterId].bookingsCount += 1;
-      rentersMap[renterId].renterRevenue += renterShare; // ✅ the real split result
-    }
+    const monthlyStats = Object.entries(monthlyMap)
+      .map(([month, amount]) => ({
+        month,
+        amount: Number(amount.toFixed(2)),
+      }))
+      .sort((a, b) => (a.month > b.month ? 1 : -1));
 
     const renters = Object.values(rentersMap)
       .map((r) => ({
@@ -124,46 +117,34 @@ export async function GET(_req: NextRequest) {
       }))
       .sort((a, b) => b.renterRevenue - a.renterRevenue);
 
-    // ✅ Daily stats (last 30 days) using bookingsRaw (already filtered to last 30 days)
-    const dailyMap: Record<string, number> = {};
-    for (const b of bookingsRaw as any[]) {
-      const paidAmount = getPaidAmount(b);
-      const dayKey = toDayKeyUTC(new Date(b.createdAt));
-      dailyMap[dayKey] = (dailyMap[dayKey] || 0) + paidAmount;
-    }
+    const latestBookings = bookings.slice(0, 20).map((b: any) => {
+      const paidAmount = calcPaidAmount(b);
+      const platformFee = calcPlatformFee(paidAmount);
+      const renterShare = calcRenterShare(paidAmount);
 
-    // Fill missing days with 0 so the chart draws a real line
-    const dailyStats: { day: string; amount: number }[] = [];
-    for (let i = 0; i < 30; i++) {
-      const d = addDaysUTC(startUTC, i);
-      const key = toDayKeyUTC(d);
-      dailyStats.push({
-        day: key,
-        amount: Number(((dailyMap[key] || 0) as number).toFixed(2)),
-      });
-    }
-
-    // Latest bookings (paid) overall (last 20)
-    const latestBookings = (allPaidRaw as any[]).slice(0, 20).map((b: any) => {
-      const paidAmount = getPaidAmount(b);
-      const platformFee = Number((paidAmount * 0.08).toFixed(2));
-      const renterShare = Number((paidAmount * 0.92).toFixed(2));
+      const dormTitle = b.dorm?.title || "—";
+      const renterName = b.renter?.name || "—";
+      const renterEmail = b.renter?.email || "";
+      const clientName = `${b.clientFirstName || ""} ${
+        b.clientLastName || ""
+      }`.trim();
 
       return {
         id: b._id.toString(),
-        dormTitle: b.dorm?.title || "",
-        renterName: b.renter?.name || "Unknown",
-        renterEmail: b.renter?.email || "",
-        clientName: `${b.clientFirstName || ""} ${
-          b.clientLastName || ""
-        }`.trim(),
+        dormTitle,
+        renterName,
+        renterEmail,
+        clientName,
         phone: b.clientPhone || "",
         paymentType: b.paymentType,
         status: b.status,
         createdAt: b.createdAt,
 
-        paidAmount: Number(paidAmount.toFixed(2)),
+        // ✅ IMPORTANT
+        paidAmount,
         totalPrice: toNumber(b.totalPrice),
+
+        // ✅ based on paid only
         platformFee,
         renterShare,
         currency: b.currency || "USD",
@@ -176,7 +157,7 @@ export async function GET(_req: NextRequest) {
         totalPlatformFee: Number(totalPlatformFee.toFixed(2)),
         totalRenterShare: Number(totalRenterShare.toFixed(2)),
       },
-      dailyStats,
+      monthlyStats,
       renters,
       latestBookings,
     });

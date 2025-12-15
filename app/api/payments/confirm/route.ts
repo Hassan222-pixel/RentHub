@@ -28,12 +28,19 @@ export async function GET(req: NextRequest) {
     }
 
     const bookingId = session.metadata.bookingId;
-    const paymentType = session.metadata.paymentType as
+
+    // can be: "deposit" | "full" | "remaining"
+    const metaPaymentType = session.metadata.paymentType as
       | "deposit"
       | "full"
+      | "remaining"
       | undefined;
 
-    const booking = await Booking.findById(bookingId);
+    const paymentKind = (session.metadata.paymentKind ||
+      metaPaymentType ||
+      "") as "deposit" | "full" | "remaining" | "";
+
+    const booking: any = await Booking.findById(bookingId);
     if (!booking) {
       return NextResponse.json(
         { message: "Booking not found" },
@@ -41,10 +48,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    if (booking.status !== "pending_payment") {
+    // If already confirmed, just return
+    if (booking.status === "confirmed") {
       return NextResponse.json({ booking });
     }
 
+    // Payment not paid => cancel
     if (session.payment_status !== "paid") {
       booking.paymentStatus = "failed";
       booking.status = "cancelled";
@@ -57,12 +66,23 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // ✅ Paid:
     booking.paymentStatus = "paid";
-    booking.status = paymentType === "full" ? "confirmed" : "reserved";
     booking.stripePaymentIntentId =
       typeof session.payment_intent === "string"
         ? session.payment_intent
-        : undefined;
+        : booking.stripePaymentIntentId;
+
+    if (paymentKind === "remaining") {
+      // deposit -> full conversion
+      booking.status = "confirmed";
+      booking.paymentType = "full";
+      booking.remainingAmount = 0;
+      booking.deadlineToPayRest = undefined;
+    } else {
+      // original behavior
+      booking.status = metaPaymentType === "full" ? "confirmed" : "reserved";
+    }
 
     await booking.save();
 

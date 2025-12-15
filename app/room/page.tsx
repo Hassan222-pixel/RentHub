@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import HeroSearch from "../components/Herosearch";
 import RecentProperties, {
   type PropertyCard,
@@ -14,6 +14,8 @@ export type DormListItem = {
   profileImg?: string | null;
   roomType?: "private" | "double" | "shared" | null;
   city?: string;
+  university?: string;
+
   pricePerNight?: number | null;
   pricePerWeek?: number | null;
   pricePerMonth?: number | null;
@@ -25,11 +27,16 @@ export type DormListItem = {
   capacity?: number | null;
   availableBeds?: number | null;
 
-  // ✅ NEW
   availableFrom?: string | null;
 
   adminAvailability?: "available" | "not_available";
   isAdminBlocked?: boolean;
+};
+
+type UniversityListItem = {
+  _id: string;
+  name: string;
+  area: string;
 };
 
 function formatPrice(d: DormListItem): string {
@@ -70,6 +77,7 @@ function formatFrom(d: DormListItem): string {
   if (d.isAdminBlocked) return "";
   if (!d.availableFrom) return "";
   const dt = new Date(d.availableFrom);
+  if (Number.isNaN(dt.getTime())) return "";
   const label = dt.toLocaleDateString(undefined, {
     day: "numeric",
     month: "short",
@@ -80,8 +88,14 @@ function formatFrom(d: DormListItem): string {
 export default function RoomPage() {
   const [dorms, setDorms] = useState<DormListItem[]>([]);
   const [filteredDorms, setFilteredDorms] = useState<DormListItem[]>([]);
-  const [cities, setCities] = useState<string[]>([]);
+
+  // ✅ بدل cities رح يصير areas
+  const [areas, setAreas] = useState<string[]>([]);
   const [universities, setUniversities] = useState<string[]>([]);
+  const [universitiesWithAreas, setUniversitiesWithAreas] = useState<
+    { name: string; area: string }[]
+  >([]);
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -94,20 +108,30 @@ export default function RoomPage() {
         setDorms(dormList);
         setFilteredDorms(dormList);
 
-        const uniqueCities = [
-          ...new Set(dormList.map((d) => d.city).filter(Boolean) as string[]),
-        ];
-        setCities(uniqueCities);
-
+        // ✅ Fetch universities with area (source of truth for areas)
         const uniRes = await fetch("/api/universities", { cache: "no-store" });
         if (uniRes.ok) {
           const uniData = await uniRes.json();
-          const uniNames: string[] = (uniData.universities || []).map(
-            (u: any) => u.name as string
-          );
+          const uniList: UniversityListItem[] = uniData.universities || [];
+
+          const uniNames = uniList.map((u) => u.name).filter(Boolean);
           setUniversities(uniNames);
+
+          const uniWithAreas = uniList.map((u) => ({
+            name: u.name,
+            area: u.area || "",
+          }));
+          setUniversitiesWithAreas(uniWithAreas);
+
+          const uniqueAreas = Array.from(
+            new Set(uniList.map((u) => (u.area || "").trim()).filter(Boolean))
+          ).sort();
+
+          setAreas(uniqueAreas);
         } else {
           setUniversities([]);
+          setUniversitiesWithAreas([]);
+          setAreas([]);
         }
       } catch (err) {
         console.error("Failed to load room data", err);
@@ -119,33 +143,32 @@ export default function RoomPage() {
     loadData();
   }, []);
 
-  const cards: PropertyCard[] = filteredDorms.map((d) => {
-    const isFullyOccupied =
-      d.isAdminBlocked === true ||
-      (typeof d.availableBeds === "number"
-        ? d.availableBeds <= 0
-        : d.isOccupiedNow === true);
+  const cards: PropertyCard[] = useMemo(() => {
+    return filteredDorms.map((d) => {
+      const isFullyOccupied =
+        d.isAdminBlocked === true ||
+        (typeof d.availableBeds === "number"
+          ? d.availableBeds <= 0
+          : d.isOccupiedNow === true);
 
-    const statusBadge = isFullyOccupied ? "Not available" : "Available";
+      const statusBadge = isFullyOccupied ? "Not available" : "Available";
 
-    return {
-      id: d._id,
-      title: d.title,
-      city: d.city || "Unknown",
-      price: formatPrice(d),
-      badge: statusBadge,
-      image:
-        d.profileImg ||
-        "https://images.unsplash.com/photo-1523217582562-09d0def993a6",
-      href: `/room-details/${d._id}`,
-      bedsLabel: formatBeds(d),
-
-      // ✅ NEW
-      availableFromLabel: formatFrom(d),
-
-      genderLabel: formatGender(d),
-    };
-  });
+      return {
+        id: d._id,
+        title: d.title,
+        city: d.city || "Unknown",
+        price: formatPrice(d),
+        badge: statusBadge,
+        image:
+          d.profileImg ||
+          "https://images.unsplash.com/photo-1523217582562-09d0def993a6",
+        href: `/room-details/${d._id}`,
+        bedsLabel: formatBeds(d),
+        availableFromLabel: formatFrom(d),
+        genderLabel: formatGender(d),
+      };
+    });
+  }, [filteredDorms]);
 
   return (
     <div className="main-layout">
@@ -159,8 +182,10 @@ export default function RoomPage() {
           <div className="d-flex justify-content-center mb-4">
             {!loading && (
               <HeroSearch
-                cities={cities}
+                // ✅ areas بدل cities
+                cities={areas}
                 universities={universities}
+                universitiesWithAreas={universitiesWithAreas}
                 initialDorms={dorms}
                 onResults={(filtered) => setFilteredDorms(filtered)}
               />
