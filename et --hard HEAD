@@ -1,0 +1,41 @@
+[33m0fac5d4[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mibrahim[m[33m, [m[1;31morigin/ibrahim[m[33m)[m website is fully adaptable but without data
+[33m944717e[m About manager dashboard is fixed
+[33mafee8a8[m Hero and about sections are adaptable
+[33mde78807[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mdev[m[33m)[m Add works to dev
+[33m7f0b6fd[m header and footer removed from dashboard
+[33mbe3c049[m header and footer removed from dashboard
+[33mbf1fbea[m merged work
+[33m9567bca[m changes
+[33mad3ee5f[m final merge
+[33m7ccb8b5[m dev info
+[33mbf11052[m Add uni informations
+[33m667727e[m[33m ([m[1;31morigin/frontend[m[33m)[m new template is added
+[33me4fae1f[m test
+[33m8d7b570[m update structure of Dorms page
+[33m20345f0[m our room pafe
+[33meaf9d92[m Add some edits on add/edit dorms
+[33m2bb637c[m Update some fields in dorm table
+[33me0787b7[m managers dashboard
+[33mdce6646[m Make booking request with no conflict in time
+[33m035af27[m Add filtration to room page
+[33me612afb[m Add react-datepicker to request page
+[33m9f05fb3[m Add backend informations to client dashboard
+[33m9b914b1[m Add relationship between dorms and university tables
+[33m11547b9[m Adding university page in admin dashboard
+[33m1ed7b45[m fixing login issue
+[33mf9320ed[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m test test
+[33meb0cc79[m test
+[33m460c8b6[m test
+[33m794b3ab[m fixing small issue in search input
+[33mc31dd4a[m test
+[33m55cfd3c[m Merged work
+[33m51cb89c[m Finish adding forms in Listing page
+[33m0643ce6[m manager dashboard
+[33ma39c439[m Adding map feature to Dorms part
+[33m74d910a[m[33m ([m[1;32mibrahim2[m[33m)[m All pages are added with their routings
+[33mbb4327d[m Home page is added
+[33m514c6cc[m Add Renter Dashboard with related pages
+[33m926b6d7[m Adding Notes for Renter Dashboard
+[33mbbd6e6d[m This Readme for hassan
+[33m3bec27b[m[33m ([m[1;32mmain[m[33m)[m Initial project upload
+[33md71bdbc[m Initial commit from Create Next App

@@ -1,24 +1,37 @@
 import "./hero.css";
 
-export default function Hero() {
+interface HeroProps {
+  data: {
+    backgroundImage: string;
+    highlightedH2: string;
+    titleH1: string;
+    subtitleH2: string;
+  };
+}
+
+export default function Hero({ data }: HeroProps) {
+  const { backgroundImage, highlightedH2, titleH1, subtitleH2 } = data;
+
   return (
     <section
       className="hero"
       style={{
-        backgroundImage:
-          `url("https://images.unsplash.com/photo-1507089947368-19c1da9775ae")`,
+        backgroundImage: `url("${backgroundImage}")`,
       }}
     >
       <div className="hero-overlay">
         <div className="hero-content">
 
-          <span className="offer-tag">SUPER OFFER</span>
+          {/* Highlighted small H2 */}
+          <span className="offer-tag">{highlightedH2}</span>
 
-          <h1 className="hero-title">Villa with sea view</h1>
+          {/* Main Title */}
+          <h1 className="hero-title">{titleH1}</h1>
 
-          <p className="hero-price">$1,245,999</p>
+          {/* Subtitle */}
+          <p className="hero-price">{subtitleH2}</p>
 
-          {/* Search Section */}
+          {/* Search Section — UNCHANGED */}
           <div className="search-box">
 
             <select>

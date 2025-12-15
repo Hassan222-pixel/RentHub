@@ -1,7 +1,7 @@
 /* HERO SECTION */
 .search-hero {
   height: 380px;
-  background-image: url("https://preview.colorlib.com/theme/bluesky/img/banner/home-banner.jpg");
+  background-image: url("https://preview.colorlib.com/theme/bluesky/images/property_4.jpg.webp");
   background-size: cover;
   background-position: center;
   position: relative;
@@ -120,4 +120,17 @@
   font-weight: 600;
   cursor: pointer;
   color: #1f74ff;
+}
+
+/* REMOVE breadcrumb bar on Rooms page */
+.search-hero .breadcrumb {
+  display: none;
+}
+
+/* ENSURE hero title is white */
+.search-hero h1 {
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-shadow: 0 4px 15px rgba(0,0,0,0.4);
 }

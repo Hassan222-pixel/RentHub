@@ -1,4 +1,3 @@
-// app/client/register/page.tsx
 "use client";
 
 import { useState, FormEvent } from "react";
@@ -36,7 +35,6 @@ export default function ClientRegisterPage() {
       return;
     }
 
-    // بعد التسجيل نوجّه المستخدم مباشرة
     router.push(next);
   };
 
@@ -57,110 +55,55 @@ export default function ClientRegisterPage() {
         style={{
           width: "100%",
           maxWidth: "420px",
-          background: "rgba(255, 255, 255, 0.95)",
+          background: "rgba(255,255,255,0.95)",
           padding: "35px",
           borderRadius: "12px",
           boxShadow: "0 0 25px rgba(0,0,0,0.2)",
         }}
       >
-        <h2
-          style={{
-            textAlign: "center",
-            marginBottom: "25px",
-            fontWeight: 700,
-            color: "#333",
-          }}
-        >
+        <h2 style={{ textAlign: "center", marginBottom: 20 }}>
           Client Register
         </h2>
 
-        {error && <div className="alert alert-danger text-center">{error}</div>}
+        {error && <div style={{ color: "red", textAlign: "center" }}>{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <div className="mb-3">
-            <label className="form-label">Full Name</label>
-            <input
-              className="form-control"
-              type="text"
-              value={name}
-              style={{ height: "45px" }}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter your full name"
-              required
-            />
-          </div>
+          <input className="form-control mb-2" placeholder="Full Name" required
+            value={name} onChange={(e) => setName(e.target.value)} />
 
-          <div className="mb-3">
-            <label className="form-label">Email Address</label>
-            <input
-              className="form-control"
-              type="email"
-              value={email}
-              style={{ height: "45px" }}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              required
-            />
-          </div>
+          <input className="form-control mb-2" placeholder="Email" type="email" required
+            value={email} onChange={(e) => setEmail(e.target.value)} />
 
-          <div className="mb-3">
-            <label className="form-label">Password</label>
-            <input
-              className="form-control"
-              type="password"
-              value={password}
-              style={{ height: "45px" }}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-            />
-          </div>
+          <input className="form-control mb-2" placeholder="Password" type="password" required
+            value={password} onChange={(e) => setPassword(e.target.value)} />
 
-          <div className="mb-3">
-            <label className="form-label">Confirm Password</label>
-            <input
-              className="form-control"
-              type="password"
-              value={confirm}
-              style={{ height: "45px" }}
-              onChange={(e) => setConfirm(e.target.value)}
-              placeholder="Confirm your password"
-              required
-            />
-          </div>
+          <input className="form-control mb-3" placeholder="Confirm Password" type="password" required
+            value={confirm} onChange={(e) => setConfirm(e.target.value)} />
 
-          <button
-            type="submit"
-            className="btn btn-primary w-100"
-            style={{
-              marginTop: "10px",
-              height: "45px",
-              fontWeight: 600,
-              borderRadius: "8px",
-            }}
-          >
-            Register
-          </button>
+          <button className="btn btn-primary w-100 mb-3">Register</button>
         </form>
 
-        <p
-          style={{
-            textAlign: "center",
-            marginTop: "15px",
-            fontSize: "14px",
-          }}
-        >
-          Already have an account? <a href="/client/login">Login</a>
-        </p>
+        {/* SOCIAL LOGIN */}
+        <div style={{ textAlign: "center", marginBottom: 15 }}>
+          <div style={{ marginBottom: 10, color: "#777" }}>OR</div>
 
-        <p
-          style={{
-            textAlign: "center",
-            marginTop: "20px",
-            fontSize: "14px",
-          }}
-        >
-          © {new Date().getFullYear()} RentHub
+          <button className="btn w-100 mb-2"
+            style={{ border: "1px solid #ddd" }}>
+            <img src="https://www.svgrepo.com/show/475656/google-color.svg"
+              width={18} style={{ marginRight: 8 }} />
+            Continue with Google
+          </button>
+
+          <button className="btn w-100"
+            style={{ border: "1px solid #0A66C2", color: "#0A66C2" }}>
+            <img src="https://www.svgrepo.com/show/448234/linkedin.svg"
+              width={18} style={{ marginRight: 8 }} />
+            Continue with LinkedIn
+          </button>
+        </div>
+
+        <p style={{ textAlign: "center" }}>
+          Already have an account? <a href="/client/login">Login</a>
         </p>
       </div>
     </div>

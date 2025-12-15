@@ -1,177 +1,155 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import "../news/news.css";
-import HeroSearch from "../components/Herosearch";
 import Newsletter from "../components/Newsletter";
 
-const blogPosts = [
-  {
-    title: "How to invest in real estate?",
-    date: "15 Apr '18",
-    author: "James Morrison",
-    category: "Real Estate",
-    comments: 3,
-    image: "https://preview.colorlib.com/theme/bluesky/img/blog/main-blog/m-blog-1.jpg",
-    text:
-      "Donec ullamcorper nulla non metus auctor fringilla. Curabitur blandit tempus porttitor. Sed lectus urna, ultricies sit amet risus eget, euismod imperdiet augue. Duis imperdiet.",
-  },
-  {
-    title: "The best 10 cities to buy a house",
-    date: "15 Apr '18",
-    author: "James Morrison",
-    category: "Real Estate",
-    comments: 3,
-    image: "https://preview.colorlib.com/theme/bluesky/img/blog/main-blog/m-blog-2.jpg",
-    text:
-      "Donec ullamcorper nulla non metus auctor fringilla. Curabitur blandit tempus porttitor. Sed lectus urna, ultricies sit amet risus eget, euismod imperdiet augue.",
-  },
-  {
-    title: "5 Tips for a vacation home",
-    date: "15 Apr '18",
-    author: "James Morrison",
-    category: "Real Estate",
-    comments: 3,
-    image: "https://preview.colorlib.com/theme/bluesky/img/blog/main-blog/m-blog-3.jpg",
-    text:
-      "Donec ullamcorper nulla non metus auctor fringilla. Curabitur blandit tempus porttitor. Sed lectus urna, ultricies sit amet risus eget, euismod imperdiet augue.",
-  },
-];
+// HeroSearch = client only
+const HeroSearch = dynamic(
+  () => import("../components/Herosearch"),
+  { ssr: false }
+);
+
+interface Post {
+  title: string;
+  day: string;
+  monthYear: string;
+  author: string;
+  category: string;
+  commentsCount: number;
+  image: string;
+  excerpt: string;
+}
+
+interface Category {
+  name: string;
+  count: number;
+}
+
+interface LatestPost {
+  title: string;
+  image: string;
+  author: string;
+}
+
+interface NewsData {
+  bannerTitle: string;
+  bannerBackgroundImage: string;
+  posts: Post[];
+  categories: Category[];
+  latestPosts: LatestPost[];
+}
 
 export default function NewsPage() {
+  const [news, setNews] = useState<NewsData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch("/api/news", { cache: "no-store" });
+        const data = await res.json();
+
+        setNews({
+          bannerTitle: data.bannerTitle ?? "News",
+          bannerBackgroundImage: data.bannerBackgroundImage ?? "",
+          posts: data.posts ?? [],
+          categories: data.categories ?? [],
+          latestPosts: data.latestPosts ?? [],
+        });
+      } catch (err) {
+        console.error("Failed to load news:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, []);
+
+  /* ✅ SAFE LOADING STATES */
+  if (loading) {
+    return <div className="p-6 text-center">Loading news...</div>;
+  }
+
+  if (!news) {
+    return (
+      <div className="p-6 text-center text-red-600">
+        Failed to load news.
+      </div>
+    );
+  }
+
   return (
     <main className="news-wrapper">
-
-      {/* HERO SECTION */}
-      <div className="news-hero">
+      {/* HERO */}
+      <div
+        className="news-hero"
+        style={{ backgroundImage: `url(${news.bannerBackgroundImage})` }}
+      >
         <div className="news-hero-overlay">
-          <h1>News</h1>
-          <p className="breadcrumb">Home / News</p>
-
+          <h1>{news.bannerTitle}</h1>
+          <p className="breadcrumb">Home / {news.bannerTitle}</p>
           <div className="hero-search-container">
             <HeroSearch />
           </div>
         </div>
       </div>
 
-      {/* MAIN CONTENT AREA */}
+      {/* CONTENT */}
       <section className="news-container">
-
-        {/* LEFT COLUMN – BLOG ENTRIES */}
         <div className="news-left">
-          {blogPosts.map((post, i) => (
+          {news.posts.map((post, i) => (
             <div className="news-entry" key={i}>
-              
-              {/* DATE CIRCLE */}
               <div className="date-circle">
-                <h3>15</h3>
-                <p>Apr '18</p>
+                <h3>{post.day}</h3>
+                <p>{post.monthYear}</p>
               </div>
 
               <div className="entry-content">
-
                 <h2>{post.title}</h2>
                 <div className="entry-meta">
                   <span>By {post.author}</span> |
                   <span> In {post.category}</span> |
-                  <span> {post.comments} Comments</span>
+                  <span> {post.commentsCount} Comments</span>
                 </div>
 
-                <img src={post.image} alt={post.title} />
-
-                <p className="entry-text">{post.text}</p>
+                {post.image && (
+                  <img src={post.image} alt={post.title} />
+                )}
+                <p className="entry-text">{post.excerpt}</p>
               </div>
-
             </div>
           ))}
-
-          {/* PAGINATION */}
-          <div className="pagination">
-            <span>01.</span>
-            <span>02.</span>
-            <span>03.</span>
-            <span>04.</span>
-          </div>
         </div>
 
-        {/* RIGHT COLUMN – SIDEBAR */}
         <div className="news-right">
-
-          {/* SEARCH BAR */}
-          <div className="sidebar-box search-box">
-            <input type="text" placeholder="Search" />
-            <button>🔍</button>
-          </div>
-
-          {/* CATEGORIES */}
           <div className="sidebar-box">
             <h3>Categories</h3>
             <ul>
-              <li>Real Estate <span>20</span></li>
-              <li>Properties <span>33</span></li>
-              <li>Selling Information <span>44</span></li>
-              <li>Vacation homes <span>52</span></li>
-              <li>Uncategorized <span>12</span></li>
+              {news.categories.map((c, i) => (
+                <li key={i}>
+                  {c.name} <span>{c.count}</span>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* LATEST POSTS */}
           <div className="sidebar-box">
             <h3>Latest Posts</h3>
-
-            <div className="latest-post">
-              <img src="https://preview.colorlib.com/theme/bluesky/img/blog/popular-post/post1.jpg" />
-              <div>
-                <h4>How to choose a house?</h4>
-                <p>By William Smith</p>
+            {news.latestPosts.map((p, i) => (
+              <div className="latest-post" key={i}>
+                {p.image && (
+                  <img src={p.image} alt={p.title} />
+                )}
+                <div>
+                  <h4>{p.title}</h4>
+                  <p>By {p.author}</p>
+                </div>
               </div>
-            </div>
-
-            <div className="latest-post">
-              <img src="https://preview.colorlib.com/theme/bluesky/img/blog/popular-post/post2.jpg" />
-              <div>
-                <h4>How to spot bargains</h4>
-                <p>By William Smith</p>
-              </div>
-            </div>
-
-            <div className="latest-post">
-              <img src="https://preview.colorlib.com/theme/bluesky/img/blog/popular-post/post3.jpg" />
-              <div>
-                <h4>3 Tips to get a bargain on a home</h4>
-                <p>By William Smith</p>
-              </div>
-            </div>
-
-            <div className="latest-post">
-              <img src="https://preview.colorlib.com/theme/bluesky/img/blog/popular-post/post4.jpg" />
-              <div>
-                <h4>The best cities to own a house</h4>
-                <p>By William Smith</p>
-              </div>
-            </div>
+            ))}
           </div>
-
-          {/* SEARCH YOUR HOME WIDGET */}
-          <div className="sidebar-box search-home-box">
-
-            <h3>Search your home</h3>
-
-            <select><option>Keywords</option></select>
-            <select><option>Property ID</option></select>
-            <select><option>Property Status</option></select>
-            <select><option>City</option></select>
-            <select><option>Property Type</option></select>
-            <select><option>Bedrooms No</option></select>
-            <select><option>Bathrooms No</option></select>
-
-            {/* Price sliders (static) */}
-            <div className="price-slider">
-              <p>Min Price — Max Price</p>
-              <input type="range" />
-              <input type="range" />
-            </div>
-
-            <button className="sidebar-search-btn">SEARCH</button>
-          </div>
-
         </div>
       </section>
 
@@ -179,3 +157,4 @@ export default function NewsPage() {
     </main>
   );
 }
+  

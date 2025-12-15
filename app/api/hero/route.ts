@@ -2,21 +2,69 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Hero } from "@/models/Hero";
 
+// GET hero data
 export async function GET() {
-  await connectToDatabase();
-  const hero = await Hero.findOne();
-  return NextResponse.json(hero);
+  try {
+    await connectToDatabase();
+
+    let hero = await Hero.findOne();
+
+    // Create default doc if none exists
+    if (!hero) {
+      hero = await Hero.create({});
+    }
+
+    return NextResponse.json(hero);
+  } catch (error) {
+    console.error("GET /api/hero error:", error);
+    return NextResponse.json(
+      { message: "Failed to load hero data" },
+      { status: 500 }
+    );
+  }
 }
 
-export async function POST(req: Request) {
-  await connectToDatabase();
-  const { title, subtitle, backgroundImage } = await req.json();
+// UPDATE hero data
+export async function PUT(req: Request) {
+  try {
+    await connectToDatabase();
 
-  const hero = await Hero.findOneAndUpdate(
-    {},
-    { title, subtitle, backgroundImage },
-    { new: true, upsert: true }
-  );
+    const body = await req.json();
 
-  return NextResponse.json(hero);
+    const {
+      backgroundImage = "",
+      highlightedH2 = "",
+      titleH1 = "",
+      subtitleH2 = "",
+    } = body;
+
+    // Find existing hero doc
+    let hero = await Hero.findOne();
+
+    if (!hero) {
+      // Create new doc
+      hero = await Hero.create({
+        backgroundImage,
+        highlightedH2,
+        titleH1,
+        subtitleH2,
+      });
+    } else {
+      // Update fields
+      hero.backgroundImage = backgroundImage;
+      hero.highlightedH2 = highlightedH2;
+      hero.titleH1 = titleH1;
+      hero.subtitleH2 = subtitleH2;
+
+      await hero.save();
+    }
+
+    return NextResponse.json(hero);
+  } catch (error) {
+    console.error("PUT /api/hero error:", error);
+    return NextResponse.json(
+      { message: "Failed to save hero" },
+      { status: 500 }
+    );
+  }
 }

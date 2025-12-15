@@ -1,0 +1,38 @@
+.location-wrapper {
+  margin: 80px auto;
+  max-width: 1200px;
+  padding: 0 20px;
+}
+
+.location-header {
+  margin-bottom: 30px;
+}
+
+.location-header h2 {
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.location-content {
+  transition: opacity 0.4s ease;
+}
+
+/* DOTS */
+.location-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 25px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  background: #ccc;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.dot.active {
+  background: #2f6df6;
+}

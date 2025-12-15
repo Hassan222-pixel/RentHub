@@ -1,55 +1,65 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import "./footer.css";
-import Image from "next/image";
-import Link from "next/link";
+
+type FooterProperty = {
+  city: string;
+  title: string;
+  price: string;
+  image: string;
+};
+
+type FooterData = {
+  description: string;
+  properties: FooterProperty[];
+};
 
 export default function TemplateFooter() {
+  const [footer, setFooter] = useState<FooterData | null>(null);
+
+  useEffect(() => {
+    fetch("/api/footer", { cache: "no-store" })
+      .then((res) => res.json())
+      .then(setFooter)
+      .catch(console.error);
+  }, []);
+
+  if (!footer) return null;
+
   return (
     <footer className="footer">
+      <div className="footer-container">
 
-      {/* Main Blue Section */}
-      <div className="footer-top">
-        <div className="footer-top-content">
-
-          {/* Left: Logo + Description */}
-          <div className="footer-left">
-            <h2 className="footer-logo">bluesky</h2>
-            <p>
-              Donec in tempus leo. Aenean ultricies mauris sed quam lacinia 
-              lobortis. Cras ut vestibulum enim, in gravida nulla. Curabitur 
-              ornare nisl at sagittis cursus.
-            </p>
+        {/* LEFT */}
+        <div className="footer-left">
+          <div className="footer-logo">
+            <span className="logo-icon"></span>
+            <span className="logo-text">------RentHub------</span>
           </div>
 
-          {/* Right: Latest Properties */}
-          <div className="footer-right">
-            <h3>Latest Properties</h3>
+          <p>{footer.description}</p>
+        </div>
 
-            <div className="footer-properties">
-              <div className="property-item">
-                <p>Miami</p>
-                <span>Sea view property</span>
-                <strong>$ 1.234.981</strong>
-              </div>
+        {/* RIGHT */}
+        <div className="footer-right">
+          <h3>Latest Properties</h3>
 
-              <div className="property-item">
-                <p>Miami</p>
-                <span>Town House</span>
-                <strong>$ 1.234.981</strong>
+          <div className="footer-properties">
+            {footer.properties.map((p, i) => (
+              <div key={i} className="footer-property">
+                <img src={p.image} alt={p.title} />
+                <div>
+                  <span>{p.city}</span>
+                  <strong>{p.title}</strong>
+                  <span className="price">{p.price}</span>
+                </div>
               </div>
-
-              <div className="property-item">
-                <p>Miami</p>
-                <span>Modern House</span>
-                <strong>$ 1.234.981</strong>
-              </div>
-            </div>
+            ))}
           </div>
 
         </div>
       </div>
-
-     
-
     </footer>
   );
 }

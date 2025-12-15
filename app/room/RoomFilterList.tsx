@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import type { DormListItem } from "./page";
+import type { DormListItem } from "../types/dorms";
 
 type BookingSummary = {
   startDate: string;
@@ -25,6 +25,20 @@ type Props = {
 };
 
 const DISMISSED_KEY = "renthub_dismissed_conflict_notifications";
+
+/* 🔹 PRICE FORMATTER (reused from room/page.tsx logic) */
+function formatPrice(d: DormListItem): string {
+  if (d.pricePerMonth != null) {
+    return `$${d.pricePerMonth.toLocaleString()} / month`;
+  }
+  if (d.pricePerWeek != null) {
+    return `$${d.pricePerWeek.toLocaleString()} / week`;
+  }
+  if (d.pricePerNight != null) {
+    return `$${d.pricePerNight.toLocaleString()} / night`;
+  }
+  return "Contact for price";
+}
 
 export default function RoomFilterList({ initialDorms }: Props) {
   const [dorms, setDorms] = useState<DormListItem[]>(initialDorms);
@@ -76,24 +90,15 @@ export default function RoomFilterList({ initialDorms }: Props) {
 
   function formatDate(value: string) {
     const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return "";
-    return d.toLocaleDateString();
+    return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString();
   }
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(DISMISSED_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          setDismissedNotificationIds(parsed);
-        }
-      }
-    } catch (err) {
-      console.error(
-        "Failed to read dismissed notifications from localStorage",
-        err
-      );
+    const stored = localStorage.getItem(DISMISSED_KEY);
+    if (stored) {
+      try {
+        setDismissedNotificationIds(JSON.parse(stored));
+      } catch {}
     }
   }, []);
 
@@ -123,6 +128,8 @@ export default function RoomFilterList({ initialDorms }: Props) {
       setError(null);
 
       const params = new URLSearchParams();
+      if (searchText.trim()) params.set("q", searchText.trim());
+      if (roomType) params.set("roomType", roomType);
 
       if (searchText.trim()) params.set("q", searchText.trim());
       if (roomType) params.set("roomType", roomType);
@@ -145,17 +152,14 @@ export default function RoomFilterList({ initialDorms }: Props) {
       );
 
       if (startDate && endDate) {
-        const start = startDate;
-        const end = endDate;
-
-        const availableDorms: DormListItem[] = [];
+        const available: DormListItem[] = [];
 
         for (const dorm of filteredDorms) {
-          try {
-            const bookingsRes = await fetch(
-              `/api/bookings?dormId=${encodeURIComponent(dorm._id)}`,
-              { method: "GET" }
-            );
+          const r = await fetch(`/api/bookings?dormId=${dorm._id}`);
+          if (!r.ok) {
+            available.push(dorm);
+            continue;
+          }
 
             if (!bookingsRes.ok) {
               availableDorms.push(dorm);
@@ -173,13 +177,12 @@ export default function RoomFilterList({ initialDorms }: Props) {
           }
         }
 
-        filteredDorms = availableDorms;
+        filteredDorms = available;
       }
 
       setDorms(filteredDorms);
-    } catch (err: any) {
-      console.error("Filter error:", err);
-      setError(err.message || "Failed to load filtered rooms.");
+    } catch (e: any) {
+      setError(e.message || "Failed to apply filters");
     } finally {
       setLoading(false);
     }
@@ -214,6 +217,8 @@ export default function RoomFilterList({ initialDorms }: Props) {
   const visibleNotifications = notifications.filter(
     (n) => !dismissedNotificationIds.includes(n.id)
   );
+
+  // ----------------- UI -----------------
 
   return (
     <>
@@ -261,14 +266,14 @@ export default function RoomFilterList({ initialDorms }: Props) {
             </div>
           ))}
         </div>
-      )}
+      ))}
 
       <div
         className="mb-4 p-3"
         style={{
-          background: "rgba(255, 255, 255, 0.95)",
+          background: "#fff",
           borderRadius: "12px",
-          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
         }}
       >
         <div className="d-flex flex-wrap gap-2 align-items-center">
@@ -336,28 +341,11 @@ export default function RoomFilterList({ initialDorms }: Props) {
               minWidth: "160px",
             }}
           >
-            <span
-              style={{ marginRight: "8px", fontSize: "16px" }}
-              aria-hidden="true"
-            >
-              🛏
-            </span>
-            <select
-              className="form-select border-0 p-0"
-              value={roomType}
-              onChange={(e) =>
-                setRoomType(
-                  e.target.value as "" | "private" | "double" | "shared"
-                )
-              }
-              style={{ boxShadow: "none", backgroundColor: "transparent" }}
-            >
-              <option value="">Room type (Any)</option>
-              <option value="private">Private</option>
-              <option value="double">Double</option>
-              <option value="shared">Shared</option>
-            </select>
-          </div>
+            <option value="">Room type (Any)</option>
+            <option value="private">Private</option>
+            <option value="double">Double</option>
+            <option value="shared">Shared</option>
+          </select>
 
           <div className="d-flex gap-2 ms-auto">
             <button
@@ -378,7 +366,7 @@ export default function RoomFilterList({ initialDorms }: Props) {
             </button>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {error && (
         <div className="alert alert-danger" role="alert">
@@ -401,42 +389,39 @@ export default function RoomFilterList({ initialDorms }: Props) {
 
         {!loading &&
           dorms.map((dorm) => (
-            <div key={dorm._id} className="col-md-4 col-sm-6 mb-4">
-              <Link
-                href={`/room-details/${dorm._id}`}
-                className="text-decoration-none"
+            <Link
+              key={dorm._id}
+              href={`/room-details/${dorm._id}`}
+              className="property-card"
+            >
+              <div
+                className="property-img"
+                style={{
+                  backgroundImage: `url(${
+                    dorm.profileImg ||
+                    "https://images.unsplash.com/photo-1523217582562-09d0def993a6"
+                  })`,
+                }}
               >
-                <div id="serv_hover" className="room">
-                  <div className="room_img">
-                    <figure>
-                      <img
-                        src={dorm.profileImg || "/template/images/room1.jpg"}
-                        alt={dorm.title}
-                      />
-                    </figure>
-                  </div>
-                  <div className="bed_room">
-                    <h3>{dorm.title}</h3>
-                    <p className="mb-1">
-                      {dorm.description && dorm.description.length > 120
-                        ? dorm.description.slice(0, 120) + "..."
-                        : dorm.description}
-                    </p>
-                    <small className="text-muted">
-                      {dorm.roomType && (
-                        <>
-                          {dorm.roomType.charAt(0).toUpperCase() +
-                            dorm.roomType.slice(1)}{" "}
-                          room
-                        </>
-                      )}
-                      {dorm.city && ` · ${dorm.city}`}
-                      {dorm.university && ` · Near ${dorm.university}`}
-                    </small>
-                  </div>
-                </div>
-              </Link>
-            </div>
+                {dorm.roomType && (
+                  <span className="badge badge-new">
+                    {dorm.roomType.toUpperCase()}
+                  </span>
+                )}
+              </div>
+
+              <div className="property-info">
+                <p className="city">{dorm.city}</p>
+                <h3>{dorm.title}</h3>
+                <p className="price">{formatPrice(dorm)}</p>
+              </div>
+
+              <div className="property-footer">
+                <span>🛏 {dorm.roomType}</span>
+                <span>🎓 {dorm.university}</span>
+                <span>📍 {dorm.city}</span>
+              </div>
+            </Link>
           ))}
       </div>
     </>

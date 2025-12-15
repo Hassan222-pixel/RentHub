@@ -754,9 +754,9 @@ button {
 /** footer **/
 
 .footer {
-     background: #0f1521;
+     /* background: #0f1521;
      margin-top: 90px;
-     padding-top: 60px;
+     padding-top: 60px; */
      text-align: center;
 }
 
