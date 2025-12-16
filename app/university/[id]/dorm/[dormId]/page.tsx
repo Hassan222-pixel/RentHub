@@ -8,30 +8,26 @@ import { University } from "@/models/University";
 import { Dorm } from "@/models/Dorm";
 import { getDistanceKm } from "@/lib/distance";
 import UniversityDormMap from "@/app/components/UniversityDormMap";
+import DirectionsButtons from "@/app/components/DirectionsButtons";
 
-// ✅ CSS file is here: app/university/university-dorm-map.css
 import "../../../university-dorm-map.css";
 
 type Props = {
-  params: Promise<{ id: string; dormId: string }>; // ✅ Next 16 fix
+  params: Promise<{ id: string; dormId: string }>;
 };
 
 export default async function UniversityDormMapPage({ params }: Props) {
-  const { id, dormId } = await params; // ✅ unwrap params
+  const { id, dormId } = await params;
 
   await connectToDatabase();
 
-  // ✅ Force any to avoid TS errors with lean()
   const [uniDoc, dormDoc]: any[] = await Promise.all([
     University.findById(id).lean(),
     Dorm.findById(dormId).lean(),
   ]);
 
-  if (!uniDoc || !dormDoc) {
-    notFound();
-  }
+  if (!uniDoc || !dormDoc) notFound();
 
-  // ✅ validate coords
   if (
     typeof uniDoc.latitude !== "number" ||
     typeof uniDoc.longitude !== "number" ||
@@ -74,33 +70,49 @@ export default async function UniversityDormMapPage({ params }: Props) {
 
   return (
     <div className="uni-dorm-map-page">
-      <div className="uni-dorm-map-info">
-        <h1>{dormDoc.title}</h1>
+      {/* Modern header card */}
+      <div className="udm-header-card">
+        <div className="udm-left">
+          <div className="udm-thumb">
+            <img src={profileImage} alt={dormDoc.title} />
+          </div>
 
-        <p className="uni-dorm-map-uni">
-          Near <strong>{uniDoc.name}</strong>
-        </p>
+          <div className="udm-info">
+            <h1 className="udm-title">{dormDoc.title}</h1>
 
-        <div className="uni-dorm-map-meta">
-          <img src={profileImage} alt={dormDoc.title} />
-          <div>
-            {dormDoc.city && (
-              <p className="uni-dorm-map-city">{dormDoc.city}</p>
-            )}
-
-            <p className="uni-dorm-map-distance">
-              Distance: <strong>{distanceKm.toFixed(1)} km</strong>
+            <p className="udm-subtitle">
+              Near <strong>{uniDoc.name}</strong>
             </p>
+
+            <div className="udm-meta">
+              {dormDoc.city && (
+                <span className="udm-pill">📍 {dormDoc.city}</span>
+              )}
+              <span className="udm-pill">
+                📏 {distanceKm.toFixed(1)} km away
+              </span>
+            </div>
           </div>
         </div>
+
+        {/* Action buttons */}
+        <DirectionsButtons
+          universityName={uniDoc.name}
+          universityCoords={universityCoords}
+          dormTitle={dormDoc.title}
+          dormCoords={dormCoords}
+        />
       </div>
 
-      <UniversityDormMap
-        universityName={uniDoc.name}
-        dormTitle={dormDoc.title}
-        universityCoords={universityCoords}
-        dormCoords={dormCoords}
-      />
+      {/* Map */}
+      <div className="udm-map-card">
+        <UniversityDormMap
+          universityName={uniDoc.name}
+          dormTitle={dormDoc.title}
+          universityCoords={universityCoords}
+          dormCoords={dormCoords}
+        />
+      </div>
     </div>
   );
 }

@@ -125,3 +125,60 @@
   }
 }
 
+.uni-page-wrapper {
+  max-width: 1100px;
+  margin: 60px auto;
+  padding: 0 20px 60px;
+}
+
+.uni-page-empty {
+  margin-top: 18px;
+  color: #666;
+}
+
+/* Modern hero */
+.uni-hero-card {
+  background: #fff;
+  border: 1px solid #eef1f6;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.uni-hero-title h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  font-weight: 900;
+  color: #111;
+}
+
+.uni-hero-title p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.uni-hero-stats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.uni-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f4f7ff;
+  color: #1f74ff;
+  border: 1px solid #dbe7ff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
