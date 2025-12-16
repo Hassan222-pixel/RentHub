@@ -2,10 +2,11 @@
 // app/page.tsx
 
 import Hero from "./components/Hero";
-import RecentProperties from "./components/RecentProperties";
 import UniversitiesGrid from "./components/UniversitiesGrid";
+import WhyChooseRentHub from "./components/why-choose-renthub";
+import HowItWorks from "./components/how-it-works";
+import Stats from "./components/stats";
 import Testimonials from "./components/Testimonials";
-import Newsletter from "./components/Newsletter";
 
 import { connectToDatabase } from "@/lib/mongodb";
 import { Hero as HeroModel } from "@/models/Hero";
@@ -16,13 +17,14 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   await connectToDatabase();
 
-  // HERO
   const heroData = await HeroModel.findOne().lean();
-  const hero = heroData ?? {
-    backgroundImage: "",
-    highlightedH2: "",
-    titleH1: "",
-    subtitleH2: "",
+
+  // ✅ ALWAYS return the FULL shape Hero expects
+  const hero = {
+    backgroundImage: heroData?.backgroundImage ?? "",
+    highlightedH2: heroData?.highlightedH2 ?? "",
+    titleH1: heroData?.titleH1 ?? "",
+    subtitleH2: heroData?.subtitleH2 ?? "",
   };
 
   // UNIVERSITIES – get all, sorted
@@ -41,13 +43,11 @@ export default async function Home() {
   return (
     <>
       <Hero data={hero} />
-      <RecentProperties />
-
-      {/* Universities with pagination (6 per page) */}
+      <WhyChooseRentHub />
+      <HowItWorks />
       <UniversitiesGrid universities={universities} />
-
+      <Stats />
       <Testimonials />
-      <Newsletter />
     </>
   );
 }

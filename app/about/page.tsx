@@ -108,7 +108,7 @@ export default function AboutPage() {
           <h1>{about.bannerTitle}</h1>
           <p className="breadcrumb">Home / {about.bannerTitle}</p>
           <div className="hero-search-container">
-            <HeroSearch />
+            {/* <HeroSearch /> */}
           </div>
         </div>
       </div>
