@@ -89,7 +89,7 @@ export default function ContactPage() {
           <p className="breadcrumb">Home / {contact.bannerTitle}</p>
 
           <div className="hero-search-container">
-            <HeroSearch />
+            {/* <HeroSearch /> */}
           </div>
         </div>
       </div>

@@ -92,7 +92,7 @@ export default function NewsPage() {
           <h1>{news.bannerTitle}</h1>
           <p className="breadcrumb">Home / {news.bannerTitle}</p>
           <div className="hero-search-container">
-            <HeroSearch />
+            {/* <HeroSearch /> */}
           </div>
         </div>
       </div>

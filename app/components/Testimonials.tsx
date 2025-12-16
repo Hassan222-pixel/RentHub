@@ -2,36 +2,41 @@ import "./testimonials.css";
 
 const testimonials = [
   {
-    message: "Amazing home for me",
-    author: "Diane Smith",
+    name: "Ahmad Khalil",
+    university: "AUB Student",
+    text: "I found a fully furnished room just 5 minutes from AUB in less than a week. RentHub made everything easy.",
   },
   {
-    message: "Friendly Realtors",
-    author: "Michael Duncan",
+    name: "Rita Saad",
+    university: "LAU Student",
+    text: "The listings were clear and affordable. I contacted the landlord directly and moved in quickly.",
   },
   {
-    message: "Very good communication",
-    author: "Shawn Gaines",
+    name: "Mohammad Ali",
+    university: "LIU Student",
+    text: "RentHub helped me find a clean and budget-friendly room near my university without any stress.",
   },
 ];
 
-export default function Testimonials() {
+const Testimonials = () => {
   return (
-    <section className="testimonials-section">
-      <div className="testimonials-container">
+    <section className="testimonials">
+      <h2>What Students Say</h2>
+      <p className="subtitle">
+        Real experiences from students who found their home with RentHub
+      </p>
 
-        <h2>What our clients say</h2>
-
-        <div className="testimonials-grid">
-          {testimonials.map((t, i) => (
-            <div key={i} className="testimonial-card">
-              <p className="testimonial-message">"{t.message}"</p>
-              <p className="testimonial-author">— {t.author}</p>
-            </div>
-          ))}
-        </div>
-
+      <div className="testimonials-grid">
+        {testimonials.map((item, index) => (
+          <div className="testimonial-card" key={index}>
+            <p className="testimonial-text">“{item.text}”</p>
+            <h4>{item.name}</h4>
+            <span>{item.university}</span>
+          </div>
+        ))}
       </div>
     </section>
   );
-}
+};
+
+export default Testimonials;

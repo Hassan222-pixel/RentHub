@@ -1,4 +1,7 @@
+"use client";
+
 import "./hero.css";
+import HeroSearch from "./Herosearch";
 
 interface HeroProps {
   data: {
@@ -10,52 +13,21 @@ interface HeroProps {
 }
 
 export default function Hero({ data }: HeroProps) {
-  const { backgroundImage, highlightedH2, titleH1, subtitleH2 } = data;
-
   return (
     <section
       className="hero"
-      style={{
-        backgroundImage: `url("${backgroundImage}")`,
-      }}
+      style={{ backgroundImage: `url("${data.backgroundImage}")` }}
     >
       <div className="hero-overlay">
         <div className="hero-content">
+          <span className="offer-tag">{data.highlightedH2}</span>
+          <h1 className="hero-title">{data.titleH1}</h1>
+          <p className="hero-price">{data.subtitleH2}</p>
 
-          {/* Highlighted small H2 */}
-          <span className="offer-tag">{highlightedH2}</span>
-
-          {/* Main Title */}
-          <h1 className="hero-title">{titleH1}</h1>
-
-          {/* Subtitle */}
-          <p className="hero-price">{subtitleH2}</p>
-
-          {/* Search Section — UNCHANGED */}
-          <div className="search-box">
-
-            <select>
-              <option>For rent</option>
-              <option>For sale</option>
-            </select>
-
-            <select>
-              <option>All types</option>
-              <option>Apartment</option>
-              <option>House</option>
-              <option>Studio</option>
-            </select>
-
-            <select>
-              <option>City</option>
-              <option>Miami</option>
-              <option>Los Angeles</option>
-              <option>Florida</option>
-            </select>
-
-            <button className="search-btn">SEARCH</button>
+          {/* ✅ SAME SEARCH + SAME STYLE */}
+          <div className="hero-search-wrapper">
+            <HeroSearch />
           </div>
-
         </div>
       </div>
     </section>

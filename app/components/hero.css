@@ -71,3 +71,29 @@
 .search-btn:hover {
   background: #005ad6;
 }
+.hero-search-wrapper {
+  margin-top: 32px;
+  display: flex;
+  justify-content: center;
+}
+.hero {
+  min-height: 75vh;              /* important */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+  display: flex;
+  align-items: center;           /* centers content vertically */
+}
+
+.hero-overlay {
+  width: 100%;
+  height: 100%;
+  padding: 120px 20px 80px;      /* space below navbar */
+  background: rgba(0,0,0,0.35);  /* optional: readable text */
+}
+
+.hero-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
