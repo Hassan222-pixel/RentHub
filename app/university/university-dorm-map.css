@@ -1,0 +1,68 @@
+.uni-dorm-map-page {
+  max-width: 1100px;
+  margin: 60px auto;
+  padding: 0 20px 40px;
+}
+
+.uni-dorm-map-info h1 {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.uni-dorm-map-uni {
+  margin: 0 0 18px;
+  color: #555;
+}
+
+.uni-dorm-map-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.uni-dorm-map-meta img {
+  width: 110px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.uni-dorm-map-city {
+  margin: 0 0 4px;
+  color: #666;
+  font-size: 14px;
+}
+
+.uni-dorm-map-distance {
+  margin: 0;
+  font-size: 14px;
+}
+
+.uni-dorm-map-distance strong {
+  color: #1f74ff;
+}
+
+/* Map container */
+.uni-dorm-map-container {
+  width: 100%;
+  height: 420px;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e0e3ea;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .uni-dorm-map-meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .uni-dorm-map-meta img {
+    width: 100%;
+    height: 180px;
+  }
+}

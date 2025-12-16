@@ -227,6 +227,29 @@ Keeps Stripe secret key usage in one safe place.
 
 app/api/payments/webhook/route.ts does not exist in this project, and app/api/payments/confirm/route.ts is the file that handles the payment confirmation logic and does the required job instead.
 
+app/instrumentation.ts
+يشغّل “bootstrap” على السيرفر ليبدأ الـ cron job تلقائياً لما التطبيق يشتغل.
+
+lib/cron.ts
+فيه منطق الـ cron اليومي: يرسل تذكير للـ deposit قبل 5 أيام، ويعمل auto-cancel إذا ما اندفع الباقي.
+
+models/Notification.ts
+موديل MongoDB لتخزين إشعارات العميل (reminders + أي notifications ثانية) مع read/unread.
+
+app/api/notifications/route.ts
+API يرجّع إشعارات المستخدم الحالي (لزر الجرس بالهيدر) مع unread count.
+
+app/api/notifications/mark-read/route.ts
+API لتعليم إشعار واحد أو الكل “read” لما يفتحها المستخدم أو يكبس عليها.
+
+app/api/bookings/my/route.ts
+API يرجّع كل حجوزات العميل الحالية (لـ My Profile page) مع تفاصيل dorm + حالة الدفع.
+
+app/api/payments/create-remaining-session/route.ts
+API ينشئ Stripe Checkout Session لدفع “remaining amount” لحجوزات الـ deposit فقط.
+
+app/client/profile/page.tsx
+صفحة My Profile للعميل: تعرض حجوزاته + status + زر “Pay remaining” إذا كانت Deposit.
 
 
 
@@ -235,6 +258,9 @@ app/api/payments/webhook/route.ts does not exist in this project, and app/api/pa
 
 
 
+
+
+    
 
 
 

@@ -2,47 +2,50 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
-import { Booking } from "@/models/Booking";
 import { getCurrentUserFromApi } from "@/lib/currentUser";
+import { Notification } from "@/models/Notification";
 
 type CurrentUser = {
   _id: string;
   role: string;
 };
 
-// GET /api/bookings/me
-// Returns booking notifications for the logged-in client (e.g. conflicts)
 export async function GET(_req: NextRequest) {
   try {
     await connectToDatabase();
 
     const user = (await getCurrentUserFromApi()) as CurrentUser | null;
-
-    // If not logged in as client, just return empty notifications array
     if (!user || user.role !== "client") {
-      return NextResponse.json({ notifications: [] }, { status: 200 });
+      return NextResponse.json({ items: [], badgeCount: 0 }, { status: 200 });
     }
 
-    const bookingDocs = await Booking.find({
-      client: user._id,
-      status: "cancelled",
-      cancelReason: "conflict", // only conflicted bookings
-    })
-      .populate("dorm", "title")
-      .sort({ updatedAt: -1 })
+    // unread first, newest first
+    const items = await Notification.find({ user: user._id })
+      .sort({ readAt: 1, createdAt: -1 })
+      .limit(60)
       .lean();
 
-    const notifications = bookingDocs.map((b: any) => ({
-      id: b._id.toString(),
-      dormTitle: b.dorm?.title || "this room",
-      startDate: b.startDate,
-      endDate: b.endDate,
-    }));
+    const unreadCount = await Notification.countDocuments({
+      user: user._id,
+      readAt: { $exists: false },
+    });
 
-    return NextResponse.json({ notifications });
+    return NextResponse.json({
+      items: items.map((n: any) => ({
+        id: n._id.toString(),
+        type: n.type,
+        title: n.title,
+        body: n.body,
+        dayKey: n.dayKey,
+        dormTitle: n.dormTitle || "",
+        bookingId: n.booking ? String(n.booking) : null,
+        readAt: n.readAt ? new Date(n.readAt).toISOString() : null,
+        createdAt: n.createdAt ? new Date(n.createdAt).toISOString() : null,
+      })),
+      badgeCount: unreadCount,
+    });
   } catch (err) {
     console.error("GET /api/bookings/me error:", err);
-    // In case of error, fail gracefully with an empty list
-    return NextResponse.json({ notifications: [] }, { status: 200 });
+    return NextResponse.json({ items: [], badgeCount: 0 }, { status: 200 });
   }
 }
