@@ -38,7 +38,16 @@ type BookingItem = {
 };
 
 function money(v: number | null | undefined, currency = "USD") {
-  return `${(v || 0).toLocaleString()} ${currency}`;
+  const value = typeof v === "number" ? v : 0;
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(value);
+  } catch {
+    return `${value.toLocaleString()} ${currency}`;
+  }
 }
 
 function fmtDate(d: string) {
@@ -108,9 +117,7 @@ export default function ClientProfilePage() {
       });
 
       const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(data?.message || "Failed to load bookings");
-      }
+      if (!res.ok) throw new Error(data?.message || "Failed to load bookings");
 
       setBookings(Array.isArray(data?.bookings) ? data.bookings : []);
     } catch (e: any) {
@@ -164,19 +171,24 @@ export default function ClientProfilePage() {
     <div className="main-layout">
       <div className="our_room">
         <div
-          className="container"
+          className="container rh-profile"
           style={{ paddingTop: 30, paddingBottom: 30 }}
         >
-          <div className="d-flex align-items-center justify-content-between mb-3">
+          {/* Header */}
+          <div className="rh-profile-head mb-3">
             <div>
-              <h2 style={{ fontWeight: 900, marginBottom: 6 }}>My Profile</h2>
-              <div className="text-muted" style={{ fontSize: 13 }}>
-                {user.name} • {user.email}
+              <div className="rh-profile-kicker">Account</div>
+              <h2 className="rh-profile-title mb-1">My Profile</h2>
+              <div className="rh-profile-sub">
+                <span className="rh-dot" />
+                <span className="rh-strong">{user.name}</span>
+                <span className="rh-sep">•</span>
+                <span className="rh-strong">{user.email}</span>
               </div>
             </div>
 
             <button
-              className="btn btn-outline-secondary"
+              className="btn btn-outline-secondary rounded-pill"
               onClick={loadBookings}
               disabled={bookingsLoading}
             >
@@ -190,71 +202,52 @@ export default function ClientProfilePage() {
             </div>
           )}
 
-          <div
-            className="card border-0 mb-3"
-            style={{
-              borderRadius: 16,
-              boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-            }}
-          >
-            <div className="card-body" style={{ padding: 16 }}>
-              <div
-                style={{ fontWeight: 900, color: "#0f172a", marginBottom: 10 }}
-              >
-                My bookings
+          {/* Bookings card */}
+          <div className="card rh-card border-0 mb-3">
+            <div className="card-body rh-card-body">
+              <div className="rh-card-head mb-3">
+                <div>
+                  <div className="rh-section-title">My bookings</div>
+                  <div className="rh-section-sub">
+                    Track status, payments, and dates for your stays.
+                  </div>
+                </div>
+
+                <div className="rh-badge-soft">
+                  {sorted.length} booking{sorted.length === 1 ? "" : "s"}
+                </div>
               </div>
 
               {bookingsLoading ? (
-                <div className="text-muted">Loading bookings...</div>
+                <div className="rh-empty">Loading bookings...</div>
               ) : sorted.length === 0 ? (
-                <div className="text-muted">You have no bookings yet.</div>
+                <div className="rh-empty">You have no bookings yet.</div>
               ) : (
                 <div className="d-flex flex-column gap-3">
                   {sorted.map((b) => {
                     const isConfirmed = b.status === "confirmed";
-                    const badgeBg = isConfirmed ? "#22c55e" : "#ef4444";
-                    const badgeText = isConfirmed ? "Confirmed" : "Reserved";
+
+                    const statusLabel = isConfirmed ? "Confirmed" : "Reserved";
+                    const statusClass = isConfirmed
+                      ? "rh-status-ok"
+                      : "rh-status-warn";
 
                     const canPayRemaining =
                       b.paymentType === "deposit" &&
                       b.status === "reserved" &&
                       (b.remainingAmount || 0) > 0;
 
+                    const imageSrc = b.dorm.profileImg || "";
+
                     return (
-                      <div
-                        key={b.id}
-                        style={{
-                          border: "1px solid rgba(15,23,42,0.08)",
-                          borderRadius: 14,
-                          padding: 12,
-                          display: "flex",
-                          gap: 12,
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 12,
-                            alignItems: "center",
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: 54,
-                              height: 54,
-                              borderRadius: 12,
-                              background: "rgba(15,23,42,0.06)",
-                              overflow: "hidden",
-                              flex: "0 0 auto",
-                            }}
-                          >
-                            {b.dorm.profileImg ? (
+                      <div key={b.id} className="rh-booking-row">
+                        {/* left */}
+                        <div className="rh-booking-left">
+                          <div className="rh-thumb">
+                            {imageSrc ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
-                                src={b.dorm.profileImg}
+                                src={imageSrc}
                                 alt={b.dorm.title}
                                 style={{
                                   width: "100%",
@@ -262,45 +255,52 @@ export default function ClientProfilePage() {
                                   objectFit: "cover",
                                 }}
                               />
-                            ) : null}
+                            ) : (
+                              <div className="rh-thumb-fallback">
+                                {b.dorm.title?.slice(0, 1) || "R"}
+                              </div>
+                            )}
                           </div>
 
-                          <div>
-                            <div style={{ fontWeight: 900, color: "#0f172a" }}>
+                          <div className="rh-booking-meta">
+                            <div className="rh-booking-title">
                               {b.dorm.title}
                             </div>
-                            <div
-                              className="text-muted"
-                              style={{ fontSize: 13 }}
-                            >
-                              {b.dorm.city ? `${b.dorm.city} • ` : ""}
-                              {fmtDate(b.startDate)} → {fmtDate(b.endDate)}
+
+                            <div className="rh-booking-sub">
+                              {b.dorm.city ? <span>{b.dorm.city}</span> : null}
+                              {b.dorm.city ? (
+                                <span className="rh-sep">•</span>
+                              ) : null}
+                              <span>
+                                {fmtDate(b.startDate)} → {fmtDate(b.endDate)}
+                              </span>
                             </div>
 
-                            <div
-                              className="text-muted"
-                              style={{ fontSize: 12, marginTop: 4 }}
-                            >
-                              Type:{" "}
-                              <span style={{ fontWeight: 800 }}>
-                                {b.paymentType}
+                            <div className="rh-booking-line">
+                              <span className="rh-chip">
+                                Payment: <strong>{b.paymentType}</strong>
                               </span>
-                              {" • "}
-                              Total:{" "}
-                              <span style={{ fontWeight: 800 }}>
-                                {money(b.totalPrice, b.currency)}
+                              <span className="rh-chip">
+                                Total:{" "}
+                                <strong>
+                                  {money(b.totalPrice, b.currency)}
+                                </strong>
                               </span>
+
                               {b.paymentType === "deposit" ? (
                                 <>
-                                  {" • "}
-                                  Paid:{" "}
-                                  <span style={{ fontWeight: 800 }}>
-                                    {money(b.depositAmount, b.currency)}
+                                  <span className="rh-chip">
+                                    Paid:{" "}
+                                    <strong>
+                                      {money(b.depositAmount, b.currency)}
+                                    </strong>
                                   </span>
-                                  {" • "}
-                                  Remaining:{" "}
-                                  <span style={{ fontWeight: 800 }}>
-                                    {money(b.remainingAmount, b.currency)}
+                                  <span className="rh-chip">
+                                    Remaining:{" "}
+                                    <strong>
+                                      {money(b.remainingAmount, b.currency)}
+                                    </strong>
                                   </span>
                                 </>
                               ) : null}
@@ -308,31 +308,15 @@ export default function ClientProfilePage() {
                           </div>
                         </div>
 
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            marginLeft: "auto",
-                          }}
-                        >
-                          <span
-                            style={{
-                              background: badgeBg,
-                              color: "#fff",
-                              padding: "6px 10px",
-                              borderRadius: 999,
-                              fontSize: 12,
-                              fontWeight: 900,
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {badgeText}
+                        {/* right */}
+                        <div className="rh-booking-right">
+                          <span className={`rh-status ${statusClass}`}>
+                            {statusLabel}
                           </span>
 
                           {canPayRemaining && (
                             <button
-                              className="btn btn-primary"
+                              className="btn btn-primary rounded-pill"
                               onClick={() => payRemaining(b.id)}
                               disabled={payingId === b.id}
                             >
@@ -350,40 +334,32 @@ export default function ClientProfilePage() {
             </div>
           </div>
 
-          <div
-            className="card border-0"
-            style={{
-              borderRadius: 16,
-              boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-            }}
-          >
-            <div className="card-body" style={{ padding: 16 }}>
-              <div
-                style={{ fontWeight: 900, color: "#0f172a", marginBottom: 10 }}
-              >
-                Basic information
+          {/* Basic info card */}
+          <div className="card rh-card border-0">
+            <div className="card-body rh-card-body">
+              <div className="rh-card-head mb-3">
+                <div>
+                  <div className="rh-section-title">Basic information</div>
+                  <div className="rh-section-sub">
+                    Your account details used for bookings.
+                  </div>
+                </div>
               </div>
 
               <div className="row g-3">
                 <div className="col-12 col-md-6">
-                  <div className="text-muted" style={{ fontSize: 12 }}>
-                    Name
-                  </div>
-                  <div style={{ fontWeight: 800 }}>{user.name}</div>
+                  <div className="rh-field-label">Name</div>
+                  <div className="rh-field-value">{user.name}</div>
                 </div>
 
                 <div className="col-12 col-md-6">
-                  <div className="text-muted" style={{ fontSize: 12 }}>
-                    Email
-                  </div>
-                  <div style={{ fontWeight: 800 }}>{user.email}</div>
+                  <div className="rh-field-label">Email</div>
+                  <div className="rh-field-value">{user.email}</div>
                 </div>
 
                 <div className="col-12 col-md-6">
-                  <div className="text-muted" style={{ fontSize: 12 }}>
-                    Role
-                  </div>
-                  <div style={{ fontWeight: 800 }}>{user.role}</div>
+                  <div className="rh-field-label">Role</div>
+                  <div className="rh-field-value">{user.role}</div>
                 </div>
               </div>
             </div>

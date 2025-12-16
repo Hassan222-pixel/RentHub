@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useMemo, useState, FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import DatePicker from "react-datepicker";
@@ -31,12 +31,27 @@ type DateInterval = {
   end: Date;
 };
 
+function formatMoney(value: number, currency: string) {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(value);
+  } catch {
+    return `${Math.round(value)} ${currency}`;
+  }
+}
+
 export default function RoomRequestPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
 
   const rawId = params?.id;
   const id = Array.isArray(rawId) ? rawId[0] : rawId;
+
+  // ✅ Wizard step (UI only, functionality kept)
+  const [step, setStep] = useState<1 | 2 | 3>(1);
 
   const [dorm, setDorm] = useState<DormType | null>(null);
   const [loadingDorm, setLoadingDorm] = useState(true);
@@ -66,11 +81,11 @@ export default function RoomRequestPage() {
 
   const currency = dorm?.depositCurrency || "USD";
 
-  const today = (() => {
+  const today = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
-  })();
+  }, []);
 
   // 🔐 Auth check: must be Client
   useEffect(() => {
@@ -162,7 +177,7 @@ export default function RoomRequestPage() {
 
         setBlockedIntervals(intervals);
       } catch (_err) {
-        // no console.error to avoid dev overlay
+        // silent
       }
     }
 
@@ -173,7 +188,7 @@ export default function RoomRequestPage() {
     };
   }, [id]);
 
-  // Compute endDate + price + deposit preview
+  // Compute endDate + price + deposit preview (same logic)
   useEffect(() => {
     if (!startDate || !dorm || !dorm.pricePerMonth) {
       setEndDatePreview(null);
@@ -213,6 +228,58 @@ export default function RoomRequestPage() {
       setRemainingPreview(0);
     }
   }, [startDate, months, dorm, paymentType]);
+
+  // ✅ Wizard navigation (no submit logic changes)
+  const goNext = () => {
+    setError(null);
+    setSuccess(null);
+
+    if (step === 1) {
+      const fn = firstName.trim();
+      const ln = lastName.trim();
+      const ph = phone.trim();
+      if (!fn || !ln || !ph) {
+        setError(
+          "Please fill in your first name, last name, and phone number."
+        );
+        return;
+      }
+      setStep(2);
+      return;
+    }
+
+    if (step === 2) {
+      if (!startDate) {
+        setError("Please select a start date.");
+        return;
+      }
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      if (start < today) {
+        setError("Start date cannot be in the past.");
+        return;
+      }
+      if (months < 1 || months > 3) {
+        setError("Please select between 1 and 3 months.");
+        return;
+      }
+      if (!dorm?.pricePerMonth) {
+        setError("Monthly price is not available for this dorm.");
+        return;
+      }
+      if (estimatedPrice == null) {
+        setError("Please select dates to calculate price.");
+        return;
+      }
+      setStep(3);
+    }
+  };
+
+  const goBack = () => {
+    setError(null);
+    setSuccess(null);
+    setStep((s) => (s === 3 ? 2 : 1));
+  };
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -280,7 +347,6 @@ export default function RoomRequestPage() {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        // ✅ show message to the user, no throw, no console.error overlay
         const msg =
           data?.message ||
           "This room is not available for some dates in your selected period. Please choose another start date.";
@@ -298,7 +364,6 @@ export default function RoomRequestPage() {
 
       window.location.href = url;
     } catch (err: any) {
-      // avoid console.error in dev for expected UI flows
       setError(err?.message || "Something went wrong. Please try again.");
       setSubmitting(false);
     }
@@ -306,229 +371,386 @@ export default function RoomRequestPage() {
 
   if (checkingAuth) {
     return (
-      <div className="main-layout">
-        <div className="our_room">
-          <div className="container">
-            <p>Checking authentication...</p>
+      <div className="container py-4 rh-booking">
+        <div className="row justify-content-center">
+          <div className="col-lg-7">
+            <div className="card rh-card border-0">
+              <div className="card-body">
+                <div className="text-muted">Checking authentication...</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
+  const stepTitle = step === 1 ? "Your info" : step === 2 ? "Dates" : "Payment";
+
   return (
-    <div className="main-layout">
-      <div className="back_re">
-        <div className="container">
-          <div className="row">
-            <div className="col-md-12">
-              <div className="title">
-                <h2>Booking & Payment</h2>
+    <div className="container py-4 rh-booking">
+      <div className="row justify-content-center">
+        <div className="col-lg-7">
+          {/* Header */}
+          <div className="mb-3">
+            <nav className="rh-breadcrumb mb-2">
+              <Link href="/room" className="rh-breadcrumb-link">
+                Rooms
+              </Link>
+              <span className="rh-breadcrumb-sep">/</span>
+              <Link
+                href={id ? `/room-details/${id}` : "/room"}
+                className="rh-breadcrumb-link"
+              >
+                Details
+              </Link>
+              <span className="rh-breadcrumb-sep">/</span>
+              <span className="rh-breadcrumb-current">Booking</span>
+            </nav>
+
+            <h2 className="rh-title mb-1">Booking & Payment</h2>
+            {dorm?.title ? (
+              <div className="rh-subtitle">
+                {dorm.title}
+                {dorm.pricePerMonth != null ? (
+                  <span className="text-muted">
+                    {" "}
+                    • {formatMoney(dorm.pricePerMonth, currency)} / month (full
+                    room)
+                  </span>
+                ) : null}
               </div>
-            </div>
+            ) : null}
           </div>
-        </div>
-      </div>
 
-      <div className="our_room">
-        <div className="container">
-          {loadingDorm && (
-            <div className="row mt-4">
-              <div className="col-md-12">
-                <p>Loading room info...</p>
-              </div>
-            </div>
-          )}
+          {/* Stepper */}
+          <div className="rh-stepper mb-3">
+            {[
+              { n: 1, t: "Your info" },
+              { n: 2, t: "Dates" },
+              { n: 3, t: "Payment" },
+            ].map((s) => {
+              const state =
+                step === s.n ? "active" : step > s.n ? "done" : "todo";
+              return (
+                <div key={s.n} className={`rh-step-item ${state}`}>
+                  <div className="rh-step-circle">{s.n}</div>
+                  <div className="rh-step-label">{s.t}</div>
+                </div>
+              );
+            })}
+          </div>
 
-          {!loadingDorm && dorm && (
-            <div className="row mt-4">
-              <div className="col-md-12">
-                <h3>Book: {dorm.title}</h3>
-                <p>
-                  Monthly (full room):{" "}
-                  {dorm.pricePerMonth != null
-                    ? `${dorm.pricePerMonth} ${currency} / month`
-                    : "N/A"}
-                </p>
-              </div>
-            </div>
-          )}
+          {/* Main card */}
+          <div className="card rh-card border-0">
+            <div className="card-body">
+              {loadingDorm && (
+                <div className="text-muted">Loading room info...</div>
+              )}
 
-          {!loadingDorm && (
-            <div className="row mt-3">
-              <div className="col-md-8">
-                <form onSubmit={handleSubmit}>
-                  <div className="form-group mb-3">
-                    <label htmlFor="firstName">First Name</label>
-                    <input
-                      id="firstName"
-                      type="text"
-                      className="form-control"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                    />
-                  </div>
+              {!loadingDorm && !dorm && (
+                <div className="alert alert-warning mb-0">Room not found.</div>
+              )}
 
-                  <div className="form-group mb-3">
-                    <label htmlFor="lastName">Last Name</label>
-                    <input
-                      id="lastName"
-                      type="text"
-                      className="form-control"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                    />
-                  </div>
+              {!loadingDorm && dorm && (
+                <>
+                  <div className="d-flex align-items-center justify-content-between mb-3">
+                    <h4 className="mb-0">{stepTitle}</h4>
 
-                  <div className="form-group mb-3">
-                    <label htmlFor="phone">Phone Number</label>
-                    <input
-                      id="phone"
-                      type="tel"
-                      className="form-control"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="form-group mb-3">
-                    <label htmlFor="startDate">Start Date</label>
-                    <DatePicker
-                      id="startDate"
-                      selected={startDate}
-                      onChange={(date) => setStartDate(date)}
-                      minDate={today}
-                      excludeDateIntervals={blockedIntervals}
-                      selectsStart
-                      startDate={startDate}
-                      dateFormat="yyyy-MM-dd"
-                      className="form-control"
-                      placeholderText="Select start date"
-                      wrapperClassName="w-100"
-                    />
-                    <small className="text-muted d-block mt-1">
-                      You can start on any day.
-                    </small>
-                  </div>
-
-                  <div className="form-group mb-3">
-                    <label htmlFor="months">Duration (months)</label>
-                    <select
-                      id="months"
-                      className="form-control"
-                      value={months}
-                      onChange={(e) => setMonths(Number(e.target.value))}
-                    >
-                      <option value={1}>1 month</option>
-                      <option value={2}>2 months</option>
-                      <option value={3}>3 months</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group mb-3">
-                    <div className="form-check">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id="isOngoing"
-                        checked={isOngoing}
-                        onChange={(e) => setIsOngoing(e.target.checked)}
-                      />
-                      <label className="form-check-label" htmlFor="isOngoing">
-                        Ongoing booking
-                      </label>
-                    </div>
-                  </div>
-
-                  {estimatedPrice != null && (
-                    <p>
-                      Estimated price for you:{" "}
-                      <strong>
-                        {estimatedPrice} {currency}
-                      </strong>
-                    </p>
-                  )}
-
-                  <div className="form-group mb-3">
-                    <label>Payment option</label>
-                    <div className="d-flex flex-column">
-                      <label className="mb-1">
-                        <input
-                          type="radio"
-                          name="paymentType"
-                          value="full"
-                          checked={paymentType === "full"}
-                          onChange={() => setPaymentType("full")}
-                          className="me-2"
-                        />
-                        Pay full amount now{" "}
-                        {estimatedPrice != null && (
-                          <span className="ms-1">
-                            ({estimatedPrice} {currency})
-                          </span>
-                        )}
-                      </label>
-
-                      <label>
-                        <input
-                          type="radio"
-                          name="paymentType"
-                          value="deposit"
-                          checked={paymentType === "deposit"}
-                          onChange={() => setPaymentType("deposit")}
-                          className="me-2"
-                        />
-                        Pay deposit now{" "}
-                        {depositPreview != null && remainingPreview != null && (
-                          <span className="ms-1">
-                            ({depositPreview} {currency} now, {remainingPreview}{" "}
-                            {currency} later)
-                          </span>
-                        )}
-                      </label>
-                    </div>
+                    {/* Small summary pill */}
+                    {estimatedPrice != null ? (
+                      <span className="badge bg-light text-dark rh-pill">
+                        Total: {formatMoney(estimatedPrice, currency)}
+                      </span>
+                    ) : (
+                      <span className="badge bg-light text-dark rh-pill">
+                        Pick dates to calculate
+                      </span>
+                    )}
                   </div>
 
                   {error && (
-                    <div className="alert alert-warning mt-2" role="alert">
+                    <div className="alert alert-warning" role="alert">
                       {error}
                     </div>
                   )}
 
                   {success && (
-                    <div className="alert alert-success mt-2" role="alert">
+                    <div className="alert alert-success" role="alert">
                       {success}
                     </div>
                   )}
 
-                  <button
-                    type="submit"
-                    className="btn btn-primary mt-3"
-                    disabled={submitting}
-                  >
-                    {submitting ? "Redirecting to payment..." : "Pay with card"}
-                  </button>
-                </form>
+                  {/* ✅ Keep functionality: same form submit, just content switches by step */}
+                  <form onSubmit={handleSubmit}>
+                    {/* Step 1 */}
+                    {step === 1 && (
+                      <div className="row g-3">
+                        <div className="col-md-6">
+                          <label htmlFor="firstName" className="form-label">
+                            First Name
+                          </label>
+                          <input
+                            id="firstName"
+                            type="text"
+                            className="form-control"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            placeholder="e.g. Ahmed"
+                          />
+                        </div>
 
-                <div className="mt-4">
-                  <Link
-                    href={`/room-details/${id}`}
-                    className="btn btn-secondary"
-                  >
-                    ← Back to Room Details
-                  </Link>
-                </div>
-              </div>
-            </div>
-          )}
+                        <div className="col-md-6">
+                          <label htmlFor="lastName" className="form-label">
+                            Last Name
+                          </label>
+                          <input
+                            id="lastName"
+                            type="text"
+                            className="form-control"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            placeholder="e.g. Ali"
+                          />
+                        </div>
 
-          {!loadingDorm && !dorm && (
-            <div className="row mt-4">
-              <div className="col-md-12">
-                <p>Room not found.</p>
-              </div>
+                        <div className="col-12">
+                          <label htmlFor="phone" className="form-label">
+                            Phone Number
+                          </label>
+                          <input
+                            id="phone"
+                            type="tel"
+                            className="form-control"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="+20 10 1234 5678"
+                          />
+                          <div className="form-text">
+                            Use a number you can receive calls/WhatsApp on.
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 2 */}
+                    {step === 2 && (
+                      <div className="row g-3">
+                        <div className="col-md-6">
+                          <label htmlFor="startDate" className="form-label">
+                            Start Date
+                          </label>
+                          <DatePicker
+                            id="startDate"
+                            selected={startDate}
+                            onChange={(date) => setStartDate(date)}
+                            minDate={today}
+                            excludeDateIntervals={blockedIntervals}
+                            selectsStart
+                            startDate={startDate}
+                            dateFormat="yyyy-MM-dd"
+                            className="form-control"
+                            placeholderText="Select start date"
+                            wrapperClassName="w-100"
+                          />
+                          <div className="form-text">
+                            You can start on any day.
+                          </div>
+                        </div>
+
+                        <div className="col-md-6">
+                          <label htmlFor="months" className="form-label">
+                            Duration (months)
+                          </label>
+                          <select
+                            id="months"
+                            className="form-select"
+                            value={months}
+                            onChange={(e) => setMonths(Number(e.target.value))}
+                          >
+                            <option value={1}>1 month</option>
+                            <option value={2}>2 months</option>
+                            <option value={3}>3 months</option>
+                          </select>
+                          <div className="form-text">Choose 1–3 months.</div>
+                        </div>
+
+                        <div className="col-12">
+                          <div className="form-check rh-check">
+                            <input
+                              className="form-check-input"
+                              type="checkbox"
+                              id="isOngoing"
+                              checked={isOngoing}
+                              onChange={(e) => setIsOngoing(e.target.checked)}
+                            />
+                            <label
+                              className="form-check-label"
+                              htmlFor="isOngoing"
+                            >
+                              Ongoing booking (auto-renew style)
+                            </label>
+                          </div>
+                        </div>
+
+                        {endDatePreview && (
+                          <div className="col-12">
+                            <div className="rh-hint">
+                              End date preview:{" "}
+                              <strong>
+                                {endDatePreview.toLocaleDateString()}
+                              </strong>
+                            </div>
+                          </div>
+                        )}
+
+                        {estimatedPrice != null && (
+                          <div className="col-12">
+                            <div className="rh-hint">
+                              Estimated price for you:{" "}
+                              <strong>
+                                {formatMoney(estimatedPrice, currency)}
+                              </strong>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Step 3 */}
+                    {step === 3 && (
+                      <div className="row g-3">
+                        <div className="col-12">
+                          <label className="form-label">Payment option</label>
+
+                          <div className="rh-choice">
+                            <label
+                              className={`rh-choice-row ${
+                                paymentType === "full" ? "rh-choice-active" : ""
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="paymentType"
+                                value="full"
+                                checked={paymentType === "full"}
+                                onChange={() => setPaymentType("full")}
+                              />
+                              <div className="rh-choice-main">
+                                <div className="rh-choice-title">
+                                  Pay full amount now
+                                </div>
+                                <div className="rh-choice-sub text-muted">
+                                  Fastest confirmation.
+                                </div>
+                              </div>
+                              <div className="rh-choice-price">
+                                {estimatedPrice != null
+                                  ? formatMoney(estimatedPrice, currency)
+                                  : "—"}
+                              </div>
+                            </label>
+
+                            <label
+                              className={`rh-choice-row ${
+                                paymentType === "deposit"
+                                  ? "rh-choice-active"
+                                  : ""
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="paymentType"
+                                value="deposit"
+                                checked={paymentType === "deposit"}
+                                onChange={() => setPaymentType("deposit")}
+                              />
+                              <div className="rh-choice-main">
+                                <div className="rh-choice-title">
+                                  Pay deposit now
+                                </div>
+                                <div className="rh-choice-sub text-muted">
+                                  Pay the remaining later.
+                                </div>
+                              </div>
+                              <div className="rh-choice-price">
+                                {depositPreview != null
+                                  ? formatMoney(depositPreview, currency)
+                                  : estimatedPrice != null
+                                  ? formatMoney(
+                                      Math.round(estimatedPrice * 0.2),
+                                      currency
+                                    )
+                                  : "—"}
+                              </div>
+                            </label>
+
+                            {paymentType === "deposit" &&
+                              remainingPreview != null &&
+                              depositPreview != null && (
+                                <div className="rh-hint">
+                                  Remaining later:{" "}
+                                  <strong>
+                                    {formatMoney(remainingPreview, currency)}
+                                  </strong>
+                                </div>
+                              )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Footer buttons */}
+                    <div className="d-flex justify-content-between align-items-center mt-4 gap-2">
+                      {step === 1 ? (
+                        <Link
+                          href={`/room-details/${id}`}
+                          className="btn btn-outline-secondary rounded-pill"
+                        >
+                          ← Back to Room Details
+                        </Link>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary rounded-pill"
+                          onClick={goBack}
+                        >
+                          ← Back
+                        </button>
+                      )}
+
+                      <div className="d-flex gap-2">
+                        {step < 3 && (
+                          <button
+                            type="button"
+                            className="btn btn-primary rounded-pill"
+                            onClick={goNext}
+                          >
+                            Next →
+                          </button>
+                        )}
+
+                        {/* ✅ Pay button ONLY in step 3 (same submit) */}
+                        {step === 3 && (
+                          <button
+                            type="submit"
+                            className="btn btn-primary rounded-pill"
+                            disabled={submitting}
+                          >
+                            {submitting
+                              ? "Redirecting to payment..."
+                              : "Pay with card"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </form>
+                </>
+              )}
             </div>
-          )}
+          </div>
+
+          {/* Mobile back (optional already covered in step 1) */}
         </div>
       </div>
     </div>

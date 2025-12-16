@@ -4,10 +4,16 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { Dorm } from "@/models/Dorm";
 import { getCurrentUserFromApi } from "@/lib/currentUser";
 
+// ✅ NEW
+import { AdminNotification } from "@/models/AdminNotification";
+
 // Minimal user shape we care about in this route
 type CurrentUser = {
   _id: string;
   role: string; // "renter" | "admin" | ...
+  // ✅ NEW (getCurrentUserFromApi بيرجع user كامل غالباً)
+  name?: string;
+  email?: string;
 };
 
 export async function GET() {
@@ -172,6 +178,23 @@ export async function POST(req: Request) {
       profileImg,
       tour3DUrl,
     });
+
+    // ✅ NEW: Create admin notification (ADD)
+    try {
+      await AdminNotification.create({
+        type: "add",
+        message: `${user.name || "Renter"} added a new dorm: ${dorm.title}`,
+        dormId: dorm._id,
+        dormTitle: dorm.title,
+        actorId: user._id,
+        actorName: user.name,
+        actorEmail: user.email,
+        readBy: [],
+      });
+    } catch (e) {
+      console.error("Failed to create admin notification (add):", e);
+      // ما منوقف العملية، بس منسجّل خطأ
+    }
 
     return NextResponse.json({ dorm }, { status: 201 });
   } catch (err) {

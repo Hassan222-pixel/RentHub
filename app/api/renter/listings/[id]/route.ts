@@ -5,6 +5,9 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { Dorm } from "@/models/Dorm";
 import { getCurrentUserFromApi } from "@/lib/currentUser";
 
+// ✅ NEW
+import { AdminNotification } from "@/models/AdminNotification";
+
 // In this Next.js version, params is a Promise and must be awaited
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -13,6 +16,9 @@ type RouteContext = {
 type CurrentUser = {
   _id: string;
   role: string;
+  // ✅ NEW
+  name?: string;
+  email?: string;
 };
 
 //
@@ -197,6 +203,22 @@ export async function PUT(req: Request, context: RouteContext) {
       return NextResponse.json({ message: "Not found" }, { status: 404 });
     }
 
+    // ✅ NEW: Create admin notification (EDIT)
+    try {
+      await AdminNotification.create({
+        type: "edit",
+        message: `${user.name || "Renter"} updated dorm: ${dorm.title}`,
+        dormId: dorm._id,
+        dormTitle: dorm.title,
+        actorId: user._id,
+        actorName: user.name,
+        actorEmail: user.email,
+        readBy: [],
+      });
+    } catch (e) {
+      console.error("Failed to create admin notification (edit):", e);
+    }
+
     return NextResponse.json({ dorm });
   } catch (err) {
     console.error("PUT /api/renter/listings/[id] error:", err);
@@ -229,6 +251,22 @@ export async function DELETE(_req: Request, context: RouteContext) {
 
     if (!deleted) {
       return NextResponse.json({ message: "Not found" }, { status: 404 });
+    }
+
+    // ✅ NEW: Create admin notification (DELETE)
+    try {
+      await AdminNotification.create({
+        type: "delete",
+        message: `${user.name || "Renter"} deleted dorm: ${deleted.title}`,
+        dormId: deleted._id,
+        dormTitle: deleted.title,
+        actorId: user._id,
+        actorName: user.name,
+        actorEmail: user.email,
+        readBy: [],
+      });
+    } catch (e) {
+      console.error("Failed to create admin notification (delete):", e);
     }
 
     return NextResponse.json({ success: true });
