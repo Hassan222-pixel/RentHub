@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
 
 export default function ClientLoginPage() {
   const router = useRouter();
@@ -11,29 +12,39 @@ export default function ClientLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  // 🔐 EMAIL + PASSWORD LOGIN
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-    });
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
 
-    if (!res.ok) {
-      setError("Invalid login credentials");
-      return;
-    }
+      if (!res.ok) {
+        setError("Invalid login credentials");
+        setLoading(false);
+        return;
+      }
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (data.user.role === "client") {
-      router.replace(next || "/");
-    } else {
-      router.replace("/dashboard");
+      if (data.user?.role === "client") {
+        router.replace(next || "/");
+      } else {
+        router.replace("/dashboard");
+      }
+    } catch (err) {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -64,39 +75,95 @@ export default function ClientLoginPage() {
           Client Login
         </h2>
 
-        {error && <div style={{ color: "red", textAlign: "center" }}>{error}</div>}
+        {error && (
+          <div
+            style={{
+              color: "red",
+              textAlign: "center",
+              marginBottom: 10,
+            }}
+          >
+            {error}
+          </div>
+        )}
 
+        {/* EMAIL / PASSWORD LOGIN */}
         <form onSubmit={handleSubmit}>
-          <input className="form-control mb-2" placeholder="Email" type="email" required
-            value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input
+            className="form-control mb-2"
+            placeholder="Email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
 
-          <input className="form-control mb-3" placeholder="Password" type="password" required
-            value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input
+            className="form-control mb-3"
+            placeholder="Password"
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-          <button className="btn btn-primary w-100 mb-3">Login</button>
+          <button
+            className="btn btn-primary w-100 mb-3"
+            disabled={loading}
+          >
+            {loading ? "Logging in..." : "Login"}
+          </button>
         </form>
 
         {/* SOCIAL LOGIN */}
         <div style={{ textAlign: "center", marginBottom: 15 }}>
           <div style={{ marginBottom: 10, color: "#777" }}>OR</div>
 
-          <button className="btn w-100 mb-2"
-            style={{ border: "1px solid #ddd" }}>
-            <img src="https://www.svgrepo.com/show/475656/google-color.svg"
-              width={18} style={{ marginRight: 8 }} />
+          {/* GOOGLE */}
+          <button
+            type="button"
+            className="btn w-100 mb-2"
+            style={{ border: "1px solid #ddd" }}
+            onClick={() =>
+              signIn("google", {
+                callbackUrl: next || "/",
+              })
+            }
+          >
+            <img
+              src="https://www.svgrepo.com/show/475656/google-color.svg"
+              width={18}
+              style={{ marginRight: 8 }}
+            />
             Continue with Google
           </button>
 
-          <button className="btn w-100"
-            style={{ border: "1px solid #0A66C2", color: "#0A66C2" }}>
-            <img src="https://www.svgrepo.com/show/448234/linkedin.svg"
-              width={18} style={{ marginRight: 8 }} />
+          {/* LINKEDIN */}
+          <button
+            type="button"
+            className="btn w-100"
+            style={{
+              border: "1px solid #0A66C2",
+              color: "#0A66C2",
+            }}
+            onClick={() =>
+              signIn("linkedin", {
+                callbackUrl: next || "/",
+              })
+            }
+          >
+            <img
+              src="https://www.svgrepo.com/show/448234/linkedin.svg"
+              width={18}
+              style={{ marginRight: 8 }}
+            />
             Continue with LinkedIn
           </button>
         </div>
 
         <p style={{ textAlign: "center" }}>
-          Don&apos;t have an account? <a href="/client/register">Register</a>
+          Don&apos;t have an account?{" "}
+          <a href="/client/register">Register</a>
         </p>
       </div>
     </div>

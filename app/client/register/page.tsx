@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
 
 export default function ClientRegisterPage() {
   const router = useRouter();
@@ -13,7 +14,9 @@ export default function ClientRegisterPage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  // 📝 EMAIL + PASSWORD REGISTER
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
@@ -23,19 +26,29 @@ export default function ClientRegisterPage() {
       return;
     }
 
-    const res = await fetch("/api/auth/register-client", {
-      method: "POST",
-      body: JSON.stringify({ name, email, password }),
-      headers: { "Content-Type": "application/json" },
-    });
+    setLoading(true);
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => null);
-      setError(data?.message || "Registration failed");
-      return;
+    try {
+      const res = await fetch("/api/auth/register-client", {
+        method: "POST",
+        body: JSON.stringify({ name, email, password }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setError(data?.message || "Registration failed");
+        setLoading(false);
+        return;
+      }
+
+      // ✅ After successful register, redirect
+      router.push(next);
+    } catch (err) {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    router.push(next);
   };
 
   return (
@@ -65,45 +78,106 @@ export default function ClientRegisterPage() {
           Client Register
         </h2>
 
-        {error && <div style={{ color: "red", textAlign: "center" }}>{error}</div>}
+        {error && (
+          <div style={{ color: "red", textAlign: "center", marginBottom: 10 }}>
+            {error}
+          </div>
+        )}
 
+        {/* EMAIL / PASSWORD REGISTER */}
         <form onSubmit={handleSubmit}>
-          <input className="form-control mb-2" placeholder="Full Name" required
-            value={name} onChange={(e) => setName(e.target.value)} />
+          <input
+            className="form-control mb-2"
+            placeholder="Full Name"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
 
-          <input className="form-control mb-2" placeholder="Email" type="email" required
-            value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input
+            className="form-control mb-2"
+            placeholder="Email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
 
-          <input className="form-control mb-2" placeholder="Password" type="password" required
-            value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input
+            className="form-control mb-2"
+            placeholder="Password"
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-          <input className="form-control mb-3" placeholder="Confirm Password" type="password" required
-            value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+          <input
+            className="form-control mb-3"
+            placeholder="Confirm Password"
+            type="password"
+            required
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
 
-          <button className="btn btn-primary w-100 mb-3">Register</button>
+          <button
+            className="btn btn-primary w-100 mb-3"
+            disabled={loading}
+          >
+            {loading ? "Registering..." : "Register"}
+          </button>
         </form>
 
-        {/* SOCIAL LOGIN */}
+        {/* SOCIAL REGISTER / LOGIN */}
         <div style={{ textAlign: "center", marginBottom: 15 }}>
           <div style={{ marginBottom: 10, color: "#777" }}>OR</div>
 
-          <button className="btn w-100 mb-2"
-            style={{ border: "1px solid #ddd" }}>
-            <img src="https://www.svgrepo.com/show/475656/google-color.svg"
-              width={18} style={{ marginRight: 8 }} />
+          {/* GOOGLE */}
+          <button
+            type="button"
+            className="btn w-100 mb-2"
+            style={{ border: "1px solid #ddd" }}
+            onClick={() =>
+              signIn("google", {
+                callbackUrl: next,
+              })
+            }
+          >
+            <img
+              src="https://www.svgrepo.com/show/475656/google-color.svg"
+              width={18}
+              style={{ marginRight: 8 }}
+            />
             Continue with Google
           </button>
 
-          <button className="btn w-100"
-            style={{ border: "1px solid #0A66C2", color: "#0A66C2" }}>
-            <img src="https://www.svgrepo.com/show/448234/linkedin.svg"
-              width={18} style={{ marginRight: 8 }} />
+          {/* LINKEDIN */}
+          <button
+            type="button"
+            className="btn w-100"
+            style={{
+              border: "1px solid #0A66C2",
+              color: "#0A66C2",
+            }}
+            onClick={() =>
+              signIn("linkedin", {
+                callbackUrl: next,
+              })
+            }
+          >
+            <img
+              src="https://www.svgrepo.com/show/448234/linkedin.svg"
+              width={18}
+              style={{ marginRight: 8 }}
+            />
             Continue with LinkedIn
           </button>
         </div>
 
         <p style={{ textAlign: "center" }}>
-          Already have an account? <a href="/client/login">Login</a>
+          Already have an account?{" "}
+          <a href="/client/login">Login</a>
         </p>
       </div>
     </div>

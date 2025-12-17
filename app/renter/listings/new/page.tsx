@@ -227,7 +227,7 @@ export default function NewListingPage() {
 
       const map = new mapboxgl.Map({
         container: mapContainerRef.current as HTMLDivElement,
-        style: "mapbox://styles/mapbox/streets-v12",
+        style: "mapbox://styles/mapbox/outdoors-v12",
         center: initialCenter,
         zoom: 7.5,
       });

@@ -1,0 +1,146 @@
+.uni-wrapper {
+  margin: 80px auto;
+  max-width: 1200px;
+  padding: 0 20px;
+}
+
+.uni-header {
+  margin-bottom: 30px;
+}
+
+.uni-header h2 {
+  font-size: 28px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* GRID */
+.uni-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 25px;
+}
+
+/* CARD */
+.uni-card {
+  position: relative;
+  background: #ffffff;
+  border-radius: 18px;
+  overflow: hidden;
+  padding: 25px 20px 20px;
+  text-align: center;
+  height: 260px; /* same height for all */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.uni-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+/* IMAGE – unified size */
+.uni-image {
+  max-width: 160px;
+  max-height: 100px;
+  margin: 0 auto 20px auto;
+  object-fit: contain;
+  display: block;
+}
+
+/* NAME + AREA (normal state) */
+.uni-name {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: block;
+  color: #222;
+  transition: opacity 0.2s ease;
+}
+
+.uni-area {
+  font-size: 14px;
+  color: #666;
+  transition: opacity 0.2s ease;
+}
+
+/* HOVER OVERLAY */
+.uni-hover-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+      circle at top,
+      rgba(255, 255, 255, 0.08),
+      transparent
+    ),
+    rgba(0, 0, 0, 0.75);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  color: #fff;
+  padding: 20px;
+  text-align: center;
+}
+
+.uni-hover-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.uni-hover-text {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* Hide normal text when hovering so we only see overlay content */
+.uni-card:hover .uni-name,
+.uni-card:hover .uni-area {
+  opacity: 0;
+}
+
+.uni-card:hover .uni-hover-overlay {
+  opacity: 1;
+}
+
+/* PAGINATION */
+.uni-pagination {
+  margin: 32px auto 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px; /* space between Previous | Page | Next */
+}
+
+.uni-page-btn {
+  border: none;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  background: #f1f1f1;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.uni-page-btn:hover:not(:disabled) {
+  background: #e2e2e2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.uni-page-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  box-shadow: none;
+}
+
+.uni-page-indicator {
+  font-size: 14px;
+  color: #555;
+}

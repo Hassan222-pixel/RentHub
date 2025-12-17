@@ -1,0 +1,180 @@
+.uni-dorm-map-page {
+  max-width: 1100px;
+  margin: 60px auto;
+  padding: 0 20px 60px;
+}
+
+/* Header card */
+.udm-header-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px 18px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+  border: 1px solid #eef1f6;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.udm-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 280px;
+  flex: 1;
+}
+
+.udm-thumb {
+  width: 120px;
+  height: 88px;
+  border-radius: 14px;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+}
+
+.udm-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.udm-info {
+  min-width: 220px;
+}
+
+.udm-title {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 800;
+  color: #111;
+}
+
+.udm-subtitle {
+  margin: 0 0 10px;
+  color: #555;
+  font-size: 14px;
+}
+
+.udm-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.udm-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f4f7ff;
+  color: #1f74ff;
+  border: 1px solid #dbe7ff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Actions */
+.udm-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 260px;
+}
+
+.udm-actions-hint {
+  color: #777;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Buttons */
+.udm-btn {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+
+.udm-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.14);
+}
+
+.udm-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.udm-btn-primary {
+  background: #1f74ff;
+  color: #fff;
+}
+
+.udm-btn-secondary {
+  background: #111827;
+  color: #fff;
+}
+
+.udm-btn-icon-right {
+  opacity: 0.9;
+  font-size: 12px;
+}
+
+/* Map card */
+.udm-map-card {
+  margin-top: 18px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 12px;
+  border: 1px solid #eef1f6;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+}
+
+/* Map container (used by UniversityDormMap.tsx) */
+.uni-dorm-map-container {
+  width: 100%;
+  height: 480px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .udm-header-card {
+    padding: 14px;
+  }
+
+  .udm-left {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .udm-thumb {
+    width: 100%;
+    height: 180px;
+  }
+
+  .udm-actions {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .uni-dorm-map-container {
+    height: 420px;
+  }
+}
