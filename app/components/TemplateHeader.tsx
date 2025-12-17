@@ -138,7 +138,7 @@ export default function TemplateHeader() {
     <header className="navbar">
       <div className="nav-container">
         <div className="logo">
-          <span>bluesky</span>
+          <span>RentHub</span>
         </div>
 
         <nav className="nav-links">
