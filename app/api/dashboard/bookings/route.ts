@@ -17,6 +17,7 @@ type DormLean = {
   city?: string;
   roomType?: string | null;
   adminAvailability?: "available" | "not_available" | string;
+  adminAvailabilityUpdatedAt?: Date;
 };
 
 function isAdminRole(role?: string) {
@@ -63,10 +64,11 @@ export async function GET(req: NextRequest) {
 
     // ✅ DETAILS MODE: /api/dashboard/bookings?dormId=XXXX
     if (dormId) {
-      // ✅ Cast lean result to DormLean so TS knows title exists
-      const dorm = (await Dorm.findById(dormId)
+      // ✅ Use findOne + lean + exec to avoid the weird (doc | doc[]) TS union
+      const dorm = (await Dorm.findOne({ _id: dormId })
         .select("title city roomType adminAvailability")
-        .lean()) as DormLean | null;
+        .lean()
+        .exec()) as DormLean | null;
 
       if (!dorm) {
         return NextResponse.json(
@@ -83,7 +85,8 @@ export async function GET(req: NextRequest) {
         .select(
           "clientFirstName clientLastName clientPhone startDate endDate totalPrice paymentType paymentStatus depositAmount remainingAmount status currency createdAt",
         )
-        .lean();
+        .lean()
+        .exec();
 
       const items = bookings.map((b: any) => {
         const paidAmount = computePaidAmount(b);
@@ -139,10 +142,11 @@ export async function GET(req: NextRequest) {
 
     const dormIds = agg.map((a: any) => a._id);
 
-    // ✅ Cast array lean result
+    // ✅ Use lean + exec and cast as array
     const dormDocs = (await Dorm.find({ _id: { $in: dormIds } })
       .select("title city roomType adminAvailability")
-      .lean()) as DormLean[];
+      .lean()
+      .exec()) as DormLean[];
 
     const dormMap: Record<string, DormLean> = {};
     for (const d of dormDocs) dormMap[d._id.toString()] = d;
