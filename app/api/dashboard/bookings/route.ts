@@ -10,6 +10,15 @@ type CurrentUser = {
   role: string;
 };
 
+// ✅ Lean dorm shape (what we select from Mongo)
+type DormLean = {
+  _id: any;
+  title?: string;
+  city?: string;
+  roomType?: string | null;
+  adminAvailability?: "available" | "not_available" | string;
+};
+
 function isAdminRole(role?: string) {
   return (
     role === "super-admin" ||
@@ -54,14 +63,15 @@ export async function GET(req: NextRequest) {
 
     // ✅ DETAILS MODE: /api/dashboard/bookings?dormId=XXXX
     if (dormId) {
-      const dorm = await Dorm.findById(dormId)
+      // ✅ Cast lean result to DormLean so TS knows title exists
+      const dorm = (await Dorm.findById(dormId)
         .select("title city roomType adminAvailability")
-        .lean();
+        .lean()) as DormLean | null;
 
       if (!dorm) {
         return NextResponse.json(
           { message: "Dorm not found" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
@@ -71,7 +81,7 @@ export async function GET(req: NextRequest) {
       })
         .sort({ startDate: 1 })
         .select(
-          "clientFirstName clientLastName clientPhone startDate endDate totalPrice paymentType paymentStatus depositAmount remainingAmount status currency createdAt"
+          "clientFirstName clientLastName clientPhone startDate endDate totalPrice paymentType paymentStatus depositAmount remainingAmount status currency createdAt",
         )
         .lean();
 
@@ -99,8 +109,8 @@ export async function GET(req: NextRequest) {
 
       return NextResponse.json({
         dorm: {
-          dormId: dormId,
-          title: dorm.title,
+          dormId,
+          title: dorm.title || "",
           city: dorm.city || "",
           roomType: dorm.roomType || null,
           adminAvailability: dorm.adminAvailability || "available",
@@ -109,7 +119,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // ✅ LIST MODE: same as before
+    // ✅ LIST MODE
     const agg = await Booking.aggregate([
       {
         $match: {
@@ -129,11 +139,12 @@ export async function GET(req: NextRequest) {
 
     const dormIds = agg.map((a: any) => a._id);
 
-    const dormDocs: any[] = await Dorm.find({ _id: { $in: dormIds } })
+    // ✅ Cast array lean result
+    const dormDocs = (await Dorm.find({ _id: { $in: dormIds } })
       .select("title city roomType adminAvailability")
-      .lean();
+      .lean()) as DormLean[];
 
-    const dormMap: Record<string, any> = {};
+    const dormMap: Record<string, DormLean> = {};
     for (const d of dormDocs) dormMap[d._id.toString()] = d;
 
     const items = agg
@@ -145,12 +156,10 @@ export async function GET(req: NextRequest) {
 
         return {
           dormId: a._id.toString(),
-          title: dorm.title,
+          title: dorm.title || "",
           city: dorm.city || "",
           roomType: dorm.roomType || null,
-
           adminAvailability: dorm.adminAvailability || "available",
-
           bookingsCount: a.bookingsCount || 0,
           latestBookingMode: mode,
           latestBookingCreatedAt: a.latestBookingCreatedAt
@@ -165,7 +174,7 @@ export async function GET(req: NextRequest) {
     console.error("GET /api/dashboard/bookings error:", err);
     return NextResponse.json(
       { message: "Failed to load booking dorms" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -191,14 +200,14 @@ export async function PATCH(req: Request) {
     if (!dormId || !adminAvailability) {
       return NextResponse.json(
         { message: "dormId and adminAvailability are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!["available", "not_available"].includes(adminAvailability)) {
       return NextResponse.json(
         { message: "Invalid adminAvailability" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -220,7 +229,7 @@ export async function PATCH(req: Request) {
     console.error("PATCH /api/dashboard/bookings error:", err);
     return NextResponse.json(
       { message: "Failed to update availability" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
